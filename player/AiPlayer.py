@@ -2,25 +2,27 @@ import time
 
 import numpy
 
-from game.Category import Category
+from state.Action import get_action_from_rerolls, AssignAction
+from state.Category import Category
 from player.Player import Player
+from state.State import transition
+from utils.dice import check_yahtzee
 
 
 class AiPlayer(Player):
 
-    def __init__(self,name:str,categories:list[Category]):
-        super().__init__(name,categories)
+    def __init__(self, name: str, categories: list[Category]):
+        super().__init__(name, categories)
 
     def play_turn(self):
         self._display_player_turn()
-        self.roll_dice(list(range(5)))
+        self.state.init()
         self.handle_rerolls()
-        is_yahtzee = self.verify_yahtzee()
         joker_rule = False
-        if is_yahtzee:
-            joker_rule = self.handle_yahtzee()
+        if check_yahtzee(self.state.dice):
+            print('Yahtzee!')
+            joker_rule = self.state.yahtzee_count > 0
         self.chose_category(joker_rule)
-        self.reset_dice()
 
     def get_rerolls(self):
         if numpy.random.rand() > 0.5:
@@ -29,17 +31,20 @@ class AiPlayer(Player):
         return [i for i, x in enumerate(should_reroll_die) if x]
 
     def handle_rerolls(self):
-        for _ in range(2):
+        while self.state.rerolls_left > 0:
             rerolls = self.get_rerolls()
             if rerolls is None:
                 return
             time.sleep(2)
             print(f'Rerolling dice: {rerolls}')
-            self.roll_dice(rerolls)
+            action = get_action_from_rerolls(rerolls)
+            self.state = transition(self.state, action)
+            self._display_dice()
 
     def chose_category(self, joker_rule=False):
-        valid_categories = [category for category, score in self.scorecard.items() if score is None]
-        best_category = max(valid_categories, key=lambda category: category.get_score(self.dice, joker_rule))
-        self.check_scorecard(best_category, joker_rule)
+        valid_categories = [category for category, score in self.state.scores.items() if score is None]
+        best_category = max(valid_categories, key=lambda category: category.get_score(self.state.dice, joker_rule))
+        action = AssignAction(best_category.index)
+        self.state = transition(self.state, action)
         time.sleep(2)
         self._display_choice(best_category)

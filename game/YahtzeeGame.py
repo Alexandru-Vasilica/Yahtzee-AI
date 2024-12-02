@@ -1,9 +1,7 @@
-from typing import TypedDict
-
 from player.AiPlayer import AiPlayer
 from player.HumanPlayer import HumanPlayer
 from player.Player import Player
-from game.Category import Category
+from state.Category import Category
 
 
 class YahtzeeGame:
@@ -38,7 +36,8 @@ class YahtzeeGame:
     def play(self):
         print('----Game started----')
         self._display_categories()
-        for turn in range(len(self.categories)):
+        turn = 0
+        while not self.player1.state.is_final() and not self.player2.state.is_final():
             self.player1.play_turn()
             self.player2.play_turn()
             self._display_turn_end()
