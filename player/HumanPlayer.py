@@ -1,5 +1,8 @@
-from game.Category import Category
+from state.Category import Category
 from player.Player import Player
+from state.Action import get_action_from_rerolls,AssignAction
+from state.State import transition
+from utils.dice import check_yahtzee
 
 
 class HumanPlayer(Player):
@@ -9,17 +12,17 @@ class HumanPlayer(Player):
 
     def play_turn(self):
         self._display_player_turn()
-        self.roll_dice(list(range(5)))
+        self.state.init()
+        self._display_dice()
         self.handle_rerolls()
-        is_yahtzee = self.verify_yahtzee()
         joker_rule = False
-        if is_yahtzee:
-            joker_rule = self.handle_yahtzee()
+        if check_yahtzee(self.state.dice):
+            print('Yahtzee!')
+            joker_rule = self.state.yahtzee_count > 0
         self.chose_category(joker_rule)
-        self.reset_dice()
 
     def handle_rerolls(self):
-        for _ in range(2):
+        while self.state.rerolls_left > 0:
             answer = None
             while answer not in ['y', 'n']:
                 answer = input("Would you like to reroll some dice? (y/n): ")
@@ -34,21 +37,23 @@ class HumanPlayer(Player):
                     continue
                 dice_to_reroll.append(int(dice) - 1)
             print(f'Rerolling dice: {dice_to_reroll}')
-            self.roll_dice(dice_to_reroll)
+            action = get_action_from_rerolls(dice_to_reroll)
+            self.state = transition(self.state, action)
+            self._display_dice()
 
     def chose_category(self, joker_rule=False):
         print(f'Available categories: ')
         valid_categories = []
-        for idx, category in enumerate(self.scorecard.keys()):
-            if self.scorecard.get(category) is not None:
+        for idx, category in enumerate(self.state.scores.keys()):
+            if self.state.scores.get(category) is not None:
                 continue
-            print(f'{idx + 1}. {category.name} - Points: {category.get_score(self.dice, joker_rule)}')
+            print(f'{idx + 1}. {category.name} - Points: {category.get_score(self.state.dice, joker_rule)}')
             valid_categories.append(category.name)
         category_name = None
         while category_name not in valid_categories:
             if category_name is not None:
                 print(f'Invalid category: {category_name}')
             category_name = input('Choose a category: ').lstrip().rstrip()
-        category = next(category for category in self.scorecard.keys() if category.name == category_name)
-        self.check_scorecard(category, joker_rule)
-        self._display_choice(category)
+        category = next(category for category in self.state.scores.keys() if category.name == category_name)
+        action = AssignAction(category.index)
+        self.state = transition(self.state, action)
