@@ -12,7 +12,6 @@ class HumanPlayer(Player):
 
     def play_turn(self):
         self._display_player_turn()
-        self.state.init()
         self._display_dice()
         self.handle_rerolls()
         joker_rule = False
@@ -56,4 +55,6 @@ class HumanPlayer(Player):
             category_name = input('Choose a category: ').lstrip().rstrip()
         category = next(category for category in self.state.scores.keys() if category.name == category_name)
         action = AssignAction(category.index)
+        old_dice = self.state.dice
         self.state = transition(self.state, action)
+        self._display_choice(old_dice, category)

@@ -16,7 +16,6 @@ class AiPlayer(Player):
 
     def play_turn(self):
         self._display_player_turn()
-        self.state.init()
         self.handle_rerolls()
         joker_rule = False
         if check_yahtzee(self.state.dice):
@@ -45,6 +44,7 @@ class AiPlayer(Player):
         valid_categories = [category for category, score in self.state.scores.items() if score is None]
         best_category = max(valid_categories, key=lambda category: category.get_score(self.state.dice, joker_rule))
         action = AssignAction(best_category.index)
+        old_dice = self.state.dice
         self.state = transition(self.state, action)
         time.sleep(2)
-        self._display_choice(best_category)
+        self._display_choice(old_dice, best_category)

@@ -1,4 +1,5 @@
 ASSIGN_ACTION_BOUNDARY: int = 12
+ACTION_SIZE: int = 32 + ASSIGN_ACTION_BOUNDARY
 
 
 class Action:
@@ -6,6 +7,9 @@ class Action:
 
     def __init__(self, index: int):
         self.index = index
+
+    def __hash__(self):
+        return self.index
 
 
 class RerollAction(Action):
