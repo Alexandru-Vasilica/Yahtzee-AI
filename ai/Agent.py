@@ -108,9 +108,9 @@ def train_agent(hyperparameters: HyperParameters):
             reward = agent.update(action)
             total_reward += reward
         rewards_per_episode.append(total_reward)
-        print(f'Episode {episode + 1}/{hyperparameters["episodes"]} - Total Score: {agent.state.get_score()}')
-        if (episode + 1) % 5 == 0:
-            agent.save_q_table("q_table.pkl")
+        if (episode + 1) % 50000 == 0:
+            agent.save_q_table("q_table500k.pkl")
+            print(f'Episode {episode + 1}/{hyperparameters["episodes"]} - Total Score: {agent.state.get_score()}')
         agent.epsilon = max(agent.epsilon_min, agent.epsilon * agent.epsilon_decay)
 
     print(f'Average score: {agent.evaluate_agent(hyperparameters["episodes"])}')
@@ -119,3 +119,4 @@ def train_agent(hyperparameters: HyperParameters):
     plt.ylabel('Total Reward')
     plt.title('Convergence of Q-Learning')
     plt.show()
+    plt.savefig('chart.png')
