@@ -106,7 +106,7 @@ def train_agent(hyperparameters: HyperParameters):
         rewards_per_episode.append(total_reward)
         print(f'Episode {episode + 1}/{hyperparameters["episodes"]} - Total Score: {agent.state.get_score()}')
         if (episode + 1) % 5 == 0:
-            agent.save_q_table(f'q_tables/q_table_episode_{episode + 1}.pkl')
+            agent.save_q_table("q_table.pkl")
     print(f'Average score: {agent.evaluate_agent(hyperparameters["episodes"])}')
     #agent.display_policy()
     plt.plot(range(1, hyperparameters['episodes'] + 1), rewards_per_episode)
