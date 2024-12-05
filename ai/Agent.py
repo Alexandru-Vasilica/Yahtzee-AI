@@ -43,16 +43,20 @@ class Agent:
         self.q_table = defaultdict(lambda: np.zeros(action_size))
         self.alpha = hyperparameters['alpha']
         self.gamma = hyperparameters['gamma']
-        self.epsilon = hyperparameters['epsilon']
+        self.epsilon = hyperparameters['epsilon_start']
+        self.epsilon_min = hyperparameters['epsilon_min']
+        self.epsilon_decay = hyperparameters['epsilon_decay']
         self.state = get_starting_state(categories)
 
     def choose_action(self) -> Action:
         valid_actions = self.state.get_valid_actions()
         if np.random.rand() < self.epsilon:
-            action = valid_actions[np.random.randint(0, len(valid_actions))]
+            action_index = np.random.choice(len(valid_actions))
+            action = valid_actions[action_index]
         else:
-            q_values = {action: self.q_table[self.state][action.index] for action in valid_actions}
-            action = max(q_values, key=q_values.get)
+            q_values = np.array([self.q_table[self.state][action.index] for action in valid_actions])
+            best_action_index = np.argmax(q_values)
+            action = valid_actions[best_action_index]
         return action
 
     def update(self, action: Action):
@@ -107,8 +111,9 @@ def train_agent(hyperparameters: HyperParameters):
         print(f'Episode {episode + 1}/{hyperparameters["episodes"]} - Total Score: {agent.state.get_score()}')
         if (episode + 1) % 5 == 0:
             agent.save_q_table(f'q_tables/q_table_episode_{episode + 1}.pkl')
+        agent.epsilon = max(agent.epsilon_min, agent.epsilon * agent.epsilon_decay)
+
     print(f'Average score: {agent.evaluate_agent(hyperparameters["episodes"])}')
-    #agent.display_policy()
     plt.plot(range(1, hyperparameters['episodes'] + 1), rewards_per_episode)
     plt.xlabel('Episode')
     plt.ylabel('Total Reward')
