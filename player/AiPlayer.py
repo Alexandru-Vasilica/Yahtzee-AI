@@ -43,3 +43,4 @@ class AiPlayer(Player):
         self.check_scorecard(best_category, joker_rule)
         time.sleep(2)
         self._display_choice(best_category)
+        

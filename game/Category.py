@@ -5,7 +5,7 @@ class Category:
     name: str
     description: str
 
-    def get_score(self, dice: list[int], joker_rule = False) -> int:
+    def get_score(self, dice: list[int], joker_rule=False) -> int:
         pass
 
     def __hash__(self):
@@ -23,8 +23,8 @@ class DiceValueCategory(Category):
         self.description = description
         self.value = value
 
-    def get_score(self, dice: list[int], joker_rule = False) -> int:
-        if joker_rule:
+    def get_score(self, dice: list[int], joker_rule=False) -> int:
+        if joker_rule and self.value == dice[0]:
             return 5 * self.value
         return self.value * dice.count(self.value)
 
@@ -35,7 +35,7 @@ class Chance(Category):
         self.name = 'Chance'
         self.description = 'Sum of all dice'
 
-    def get_score(self, dice: list[int], joker_rule = False) -> int:
+    def get_score(self, dice: list[int], joker_rule=False) -> int:
         return sum(dice)
 
 
@@ -75,7 +75,7 @@ class ThreeOfAKind(Category):
         self.name = 'Three of a Kind'
         self.description = 'Sum of all dice if 3 are the same'
 
-    def get_score(self, dice: list[int], joker_rule = False) -> int:
+    def get_score(self, dice: list[int], joker_rule=False) -> int:
         for i in range(1, 7):
             if dice.count(i) >= 3:
                 return sum(dice)
@@ -88,7 +88,7 @@ class FourOfAKind(Category):
         self.name = 'Four of a Kind'
         self.description = 'Sum of all dice if 4 are the same'
 
-    def get_score(self, dice: list[int], joker_rule = False) -> int:
+    def get_score(self, dice: list[int], joker_rule=False) -> int:
         for i in range(1, 7):
             if dice.count(i) >= 4:
                 return sum(dice)
@@ -101,7 +101,7 @@ class FullHouse(Category):
         self.name = 'Full House'
         self.description = '25 if 3 of a kind and 2 of a kind'
 
-    def get_score(self, dice: list[int], joker_rule = False) -> int:
+    def get_score(self, dice: list[int], joker_rule=False) -> int:
         if joker_rule:
             return 25
         threeDices = False
@@ -122,7 +122,7 @@ class SmallStraight(Category):
         self.name = 'Small Straight'
         self.description = '30 if 4 in a row'
 
-    def get_score(self, dice: list[int], joker_rule = False) -> int:
+    def get_score(self, dice: list[int], joker_rule=False) -> int:
         if joker_rule:
             return 30
         sortedDice = sorted(set(dice))
@@ -139,7 +139,7 @@ class LargeStraight(Category):
         self.name = 'Large Straight'
         self.description = '40 if 5 in a row'
 
-    def get_score(self, dice: list[int], joker_rule = False) -> int:
+    def get_score(self, dice: list[int], joker_rule=False) -> int:
         if joker_rule:
             return 40
         sortedDice = sorted(set(dice))
@@ -156,7 +156,7 @@ class Yahtzee(Category):
         self.name = 'Yahtzee'
         self.description = '50 if all dice are the same'
 
-    def get_score(self, dice: list[int], joker_rule = False) -> int:
+    def get_score(self, dice: list[int], joker_rule=False) -> int:
         if len(set(dice)) == 1:
             return 50
         return 0

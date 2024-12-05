@@ -25,7 +25,8 @@ class Player:
             if index < 0 or index > 4:
                 print('Invalid dice index')
                 continue
-            self.dice[index] = numpy.random.randint(1, 7)
+            #self.dice[index] = numpy.random.randint(1, 7)
+            self.dice[index] = 5
         self._display_dice()
 
     def _display_dice(self):
@@ -37,7 +38,6 @@ class Player:
         if len(set(self.dice)) == 1:
             return True
         return False
-
 
     def handle_yahtzee(self):
         for category in self.scorecard.keys():
@@ -60,7 +60,8 @@ class Player:
         self.dice = [None, None, None, None, None]
 
     def get_score(self):
-        return sum([score for score in self.scorecard.values() if score is not None]) + self.get_bonus() + self.yahtzee_count * 100
+        return (sum([score for score in self.scorecard.values() if score is not None]) +
+                self.get_bonus() + self.yahtzee_count * 100)
 
     def get_bonus(self):
         bonus = 0
