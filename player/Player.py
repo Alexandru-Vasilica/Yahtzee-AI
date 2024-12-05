@@ -1,37 +1,20 @@
+from __future__ import annotations
 import numpy
-
-from game import Category
-from game.Category import DiceValueCategory
+from state.State import State, get_starting_state
+from state.Category import Category, DiceValueCategory
 
 
 class Player:
     name: str
-    dice: list[int | None]
-    scorecard: dict[Category, int | None]
-    yahtzee_count: int
+    state: State
 
     def __init__(self, name: str, categories: list[Category]):
         self.name = name
-        self.score = 0
-        self.dice = [None, None, None, None, None]
-        self.scorecard = {}
-        self.yahtzee_count = 0
-        self.joker_rule_applied = False
-        for category in categories:
-            self.scorecard[category] = None
-
-    def roll_dice(self, dice_indexes: list[int]):
-        for index in dice_indexes:
-            if index < 0 or index > 4:
-                print('Invalid dice index')
-                continue
-            #self.dice[index] = numpy.random.randint(1, 7)
-            self.dice[index] = 5
-        self._display_dice()
+        self.state = get_starting_state(categories)
 
     def _display_dice(self):
         print(f'{self.name} rolls: ')
-        for idx, dice in enumerate(self.dice):
+        for idx, dice in enumerate(self.state.dice):
             print(f'Dice {idx + 1}: {dice}')
 
     def verify_yahtzee(self):
@@ -56,22 +39,11 @@ class Player:
     def _display_player_turn(self):
         print(f'----{self.name}\'s ----')
 
-    def reset_dice(self):
-        self.dice = [None, None, None, None, None]
-
     def get_score(self):
-        return (sum([score for score in self.scorecard.values() if score is not None]) +
-                self.get_bonus() + self.yahtzee_count * 100)
+        return self.state.get_score()
 
     def get_bonus(self):
-        bonus = 0
-        score = 0
-        for category in self.scorecard.keys():
-            if isinstance(category, DiceValueCategory) and self.scorecard[category] is not None:
-                score += self.scorecard[category]
-        if score >= 63:
-            bonus = 35
-        return bonus
+        return self.state.get_bonus()
 
     def handle_rerolls(self):
         pass

@@ -4,27 +4,32 @@ from typing import TypedDict
 class Category:
     name: str
     description: str
+    index: int
 
     def get_score(self, dice: list[int], joker_rule=False) -> int:
         pass
 
     def __hash__(self):
-        return hash(self.name)
+        return hash(self.index)
 
     def __eq__(self, other):
         return self.name == other.name
+
+    def __str__(self):
+        return self.name
 
 
 class DiceValueCategory(Category):
     value: int
 
     def __init__(self, name: str, description: str, value: int):
+        self.index = value - 1
         self.name = name
         self.description = description
         self.value = value
 
     def get_score(self, dice: list[int], joker_rule=False) -> int:
-        if joker_rule and self.value == dice[0]:
+        if joker_rule:
             return 5 * self.value
         return self.value * dice.count(self.value)
 
@@ -32,6 +37,7 @@ class DiceValueCategory(Category):
 class Chance(Category):
 
     def __init__(self):
+        self.index = 11
         self.name = 'Chance'
         self.description = 'Sum of all dice'
 
@@ -72,6 +78,7 @@ class Sixes(DiceValueCategory):
 class ThreeOfAKind(Category):
 
     def __init__(self):
+        self.index = 6
         self.name = 'Three of a Kind'
         self.description = 'Sum of all dice if 3 are the same'
 
@@ -85,6 +92,7 @@ class ThreeOfAKind(Category):
 class FourOfAKind(Category):
 
     def __init__(self):
+        self.index = 7
         self.name = 'Four of a Kind'
         self.description = 'Sum of all dice if 4 are the same'
 
@@ -98,6 +106,7 @@ class FourOfAKind(Category):
 class FullHouse(Category):
 
     def __init__(self):
+        self.index = 8
         self.name = 'Full House'
         self.description = '25 if 3 of a kind and 2 of a kind'
 
@@ -119,6 +128,7 @@ class FullHouse(Category):
 class SmallStraight(Category):
 
     def __init__(self):
+        self.index = 9
         self.name = 'Small Straight'
         self.description = '30 if 4 in a row'
 
@@ -136,6 +146,7 @@ class SmallStraight(Category):
 class LargeStraight(Category):
 
     def __init__(self):
+        self.index = 10
         self.name = 'Large Straight'
         self.description = '40 if 5 in a row'
 
@@ -153,6 +164,7 @@ class LargeStraight(Category):
 class Yahtzee(Category):
 
     def __init__(self):
+        self.index = 12
         self.name = 'Yahtzee'
         self.description = '50 if all dice are the same'
 
@@ -160,3 +172,8 @@ class Yahtzee(Category):
         if len(set(dice)) == 1:
             return 50
         return 0
+
+
+categories = [Ones(), Twos(), Threes(), Fours(), Fives(), Sixes(),
+              Chance(), SmallStraight(), LargeStraight(), FullHouse(), ThreeOfAKind(),
+              FourOfAKind(), Yahtzee()]
