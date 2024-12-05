@@ -33,8 +33,8 @@ class Player:
     def check_scorecard(self, category: Category, joker_rule=False):
         self.scorecard[category] = category.get_score(self.dice, joker_rule)
 
-    def _display_choice(self, category: Category):
-        print(f'{self.name} chose {category.name} with a {self.dice} roll and scored {self.scorecard[category]} points')
+    def _display_choice(self, dice: list[int], category: Category):
+        print(f'{self.name} chose {category.name} with a {dice} roll and scored {self.state.scores[category]} points')
 
     def _display_player_turn(self):
         print(f'----{self.name}\'s ----')
