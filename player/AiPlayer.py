@@ -1,5 +1,7 @@
 import time
-import numpy as np
+
+import numpy
+
 from state.Action import get_action_from_rerolls, AssignAction, get_action_from_index, RerollAction
 from state.Category import Category
 from player.Player import Player
@@ -24,18 +26,15 @@ class AiPlayer(Player):
         self.chose_category(joker_rule)
 
     def get_rerolls(self):
-        valid_actions = [action for action in self.state.get_valid_actions() if isinstance(action, RerollAction)]
-
+        valid_actions = [
+            action for action in self.state.get_valid_actions()
+            if isinstance(get_action_from_index(action.index), RerollAction)
+        ]
         if not valid_actions:
             return None
-
-        q_values = [self.q_table[self.state][action.index] for action in valid_actions]
-        best_action_index = np.argmax(q_values)
-        best_action = get_action_from_index(valid_actions[best_action_index].index)
-
-        if isinstance(best_action, RerollAction):
-            return best_action.rerolls
-        return None
+        q_values = {action: self.q_table[self.state][action.index] for action in valid_actions}
+        best_action = max(q_values, key=q_values.get)
+        return best_action.rerolls
 
     def handle_rerolls(self):
         while self.state.rerolls_left > 0:
@@ -49,18 +48,17 @@ class AiPlayer(Player):
             self._display_dice()
 
     def chose_category(self, joker_rule=False):
-        valid_actions = [action for action in self.state.get_valid_actions() if isinstance(action, AssignAction)]
-
+        valid_actions = [
+            action for action in self.state.get_valid_actions()
+            if isinstance(get_action_from_index(action.index), AssignAction)
+        ]
         if not valid_actions:
-            print("No valid categories left to assign.")
             return
-
-        q_values = [self.q_table[self.state][action.index] for action in valid_actions]
-        best_action_index = np.argmax(q_values)
-        best_action = valid_actions[best_action_index]
-        best_category = next(category for category in self.state.scores.keys() if category.index == best_action.index)
+        q_values = {action: self.q_table[self.state][action.index] for action in valid_actions}
+        best_action = max(q_values, key=q_values.get)
+        category = next(category for category in self.state.scores.keys() if category.index == best_action.index)
         old_dice = self.state.dice
-        self.state = transition(self.state, best_action)
+        action = AssignAction(category.index)
+        self.state = transition(self.state, action)
         time.sleep(2)
-        self._display_choice(old_dice, best_category)
-
+        self._display_choice(old_dice, category)
