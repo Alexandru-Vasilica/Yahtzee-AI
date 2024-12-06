@@ -54,7 +54,7 @@ class HumanPlayer(Player):
                 print(f'Invalid category: {category_name}')
             category_name = input('Choose a category: ').lstrip().rstrip()
         category = next(category for category in self.state.scores.keys() if category.name == category_name)
-        action = AssignAction(category.index)
         old_dice = self.state.dice
+        action = AssignAction(category.index)
         self.state = transition(self.state, action)
         self._display_choice(old_dice, category)
