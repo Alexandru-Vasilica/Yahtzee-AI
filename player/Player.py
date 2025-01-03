@@ -18,8 +18,7 @@ class Player:
             print(f'Dice {idx + 1}: {dice}')
 
     def _display_choice(self, dice: list[int], category: Category):
-        print(
-            f'{self.name} chose {category.name} with a {dice} roll and scored {self.state.scores[category]} points')
+        print(f'{self.name} chose {category.name} with a {dice} roll and scored {self.state.scores[category]} points')
 
     def _display_player_turn(self):
         print(f'----{self.name}\'s ----')
