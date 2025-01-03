@@ -9,10 +9,10 @@ class YahtzeeGame:
     player2: Player
     categories: list[Category]
 
-    def __init__(self, categories: list[Category]):
-        name = input('Enter your name: ')
+    def __init__(self, name: str, categories: list[Category]):
+        #name = input('Enter your name: ')
         self.player1 = HumanPlayer(name, categories)
-        self.player2 = AiPlayer('Opponent', categories, "q_table.pkl")
+        self.player2 = AiPlayer('Opponent', categories, "q_table150k.pkl")
         self.categories = categories
 
     def _display_turn_end(self):

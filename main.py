@@ -1,10 +1,12 @@
-from game.YahtzeeGame import YahtzeeGame
+from interface.YahtzeeGUI import YahtzeeGUI
 from state.Category import categories
+import tkinter as tk
 
 
 def main():
-    game = YahtzeeGame(categories)
-    game.play()
+    root = tk.Tk()
+    YahtzeeGUI(root, categories)
+    root.mainloop()
 
 
 if __name__ == '__main__':
