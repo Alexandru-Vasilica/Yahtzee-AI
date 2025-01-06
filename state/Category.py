@@ -29,7 +29,7 @@ class DiceValueCategory(Category):
         self.value = value
 
     def get_score(self, dice: list[int], joker_rule=False) -> int:
-        if joker_rule:
+        if joker_rule and dice[0] == self.value:
             return 5 * self.value
         return self.value * dice.count(self.value)
 

@@ -88,7 +88,7 @@ def transition(state: State, action) -> State:
     if action.index <= ASSIGN_ACTION_BOUNDARY:
         category = next(category for category in state.scores.keys() if category.index == action.index)
         joker_rule = False
-        if check_yahtzee(state.dice):
+        if check_yahtzee(state.dice) and (category.name == 'Yahtzee' or new_yahtzee_count > 0):
             new_yahtzee_count += 1
             joker_rule = new_yahtzee_count > 1
         new_scores[category] = category.get_score(state.dice, joker_rule)

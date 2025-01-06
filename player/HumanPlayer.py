@@ -1,6 +1,6 @@
 from state.Category import Category
 from player.Player import Player
-from state.Action import get_action_from_rerolls,AssignAction
+from state.Action import get_action_from_rerolls, AssignAction
 from state.State import transition
 from utils.dice import check_yahtzee
 
@@ -25,7 +25,6 @@ class HumanPlayer(Player):
             return
 
         answer = game_answer if game_answer else input("Would you like to reroll some dice? (y/n): ")
-
         if answer == 'n':
             return
 
