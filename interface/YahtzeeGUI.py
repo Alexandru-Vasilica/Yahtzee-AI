@@ -1,135 +1,431 @@
 import tkinter as tk
 from tkinter import messagebox
-
 from game.YahtzeeGame import YahtzeeGame
 from player.HumanPlayer import HumanPlayer
 
 
 class YahtzeeGUI:
     def __init__(self, root, categories):
+        self.root = root
+        self.categories = categories
+        self.game = None
+        self.current_player = None
+        self.dice_selected = [False] * 5
+        self.valid_categories = [category.name for category in categories]
+        self.reroll_count = 0
+
+        self.player1_name_label = None
+        self.player1_name_entry = None
+        self.start_button = None
+
+        self.bonus_p2_label = None
+        self.bonus_p1_label = None
+        self.score_labels = None
+        self.turn_phase = None
+        self.action_label = None
+        self.category_buttons = None
+        self.category_frame = None
+        self.skip_reroll_button = None
+        self.reroll_button = None
+        self.roll_button = None
+        self.dice_buttons = None
+        self.dice_images = None
+        self.dice_frame = None
+        self.player2_score = None
+        self.player1_score = None
+        self.score_frame = None
         self.start_button = None
         self.player1_name_entry = None
         self.player1_name_label = None
-        self.categories = categories
-        self.root = root
-        self.game = None
-        self.current_player = None
-        self.turn_phase = "roll"
-        self.reroll_count = 0
-        self.valid_categories = [category.name for category in categories]
-
-        self.root.title("Yahtzee Game")
-
-        self.score_frame = None
-        self.player1_score = None
-        self.player2_score = None
-        self.dice_frame = None
-        self.dice_buttons = []
-        self.roll_button = None
-        self.category_frame = None
-        self.category_buttons = []
-        self.action_label = None
-        self.reroll_button = None
-        self.skip_reroll_button = None
 
         self.setup_name_entry()
 
     def setup_name_entry(self):
-        name_frame = tk.Frame(self.root)
+        self.root.configure(bg="#228B22")
+
+        name_frame = tk.Frame(self.root, bg="#228B22", padx=20, pady=20)
         name_frame.pack(side=tk.TOP, pady=20)
 
-        self.player1_name_label = tk.Label(name_frame, text="Enter Player 1 Name:")
-        self.player1_name_label.pack(side=tk.LEFT, padx=5)
-        self.player1_name_entry = tk.Entry(name_frame)
-        self.player1_name_entry.pack(side=tk.LEFT, padx=5)
+        self.player1_name_label = tk.Label(
+            name_frame,
+            text="Enter your name:",
+            font=("Arial", 14, "bold"),
+            bg="#228B22",
+            fg="white"
+        )
+        self.player1_name_label.pack(side=tk.LEFT, padx=10)
 
-        self.start_button = tk.Button(self.root, text="Start Game", command=self.start_game)
+        self.player1_name_entry = tk.Entry(
+            name_frame,
+            font=("Arial", 14),
+            width=15,
+            relief="flat",
+            highlightbackground="white",
+            highlightthickness=2
+        )
+        self.player1_name_entry.pack(side=tk.LEFT, padx=10)
+
+        self.start_button = tk.Button(
+            self.root,
+            text="Start Game",
+            command=self.start_game,
+            bg="#B22222",
+            fg="white",
+            font=("Arial", 16, "bold"),
+            relief="raised",
+            bd=4
+        )
         self.start_button.pack(side=tk.TOP, pady=20)
+        self.start_button.bind("<Enter>", lambda e: self.start_button.config(bg="#8B0000"))
+        self.start_button.bind("<Leave>", lambda e: self.start_button.config(bg="#B22222"))
 
     def start_game(self):
         player1_name = self.player1_name_entry.get()
-        self.game = YahtzeeGame(player1_name, self.categories)
-        self.current_player = self.game.player1
+        if not player1_name.strip():
+            tk.messagebox.showerror("Error", "Please enter a name before starting the game.")
+            return
 
+        loading_label = self.create_loading_label()
+        loading_label.pack(side=tk.TOP, pady=20)
+        self.root.update()
+
+        try:
+            self.game = YahtzeeGame(player1_name, self.categories)
+        except Exception as e:
+            tk.messagebox.showerror("Error", f"An error occurred while starting the game: {e}")
+            loading_label.destroy()
+            return
+
+        loading_label.destroy()
+        self.current_player = self.game.player1
+        self.hide_name_entry_ui()
+        self.setup_ui()
+
+    def create_loading_label(self):
+        return tk.Label(
+            self.root,
+            text="Loading, please wait...",
+            font=("Arial", 16, "bold"),
+            fg="white",
+            bg="#228B22"
+        )
+
+    def hide_name_entry_ui(self):
         self.player1_name_label.pack_forget()
         self.player1_name_entry.pack_forget()
         self.start_button.pack_forget()
-        self.setup_ui()
 
     def setup_ui(self):
-        self.score_frame = tk.Frame(self.root)
-        self.score_frame.pack(side=tk.TOP, fill=tk.X)
-        self.player1_score = tk.Label(self.score_frame, text=f"{self.game.player1.name}: 0")
-        self.player1_score.pack(side=tk.LEFT, padx=20)
-        self.player2_score = tk.Label(self.score_frame, text=f"{self.game.player2.name}: 0")
-        self.player2_score.pack(side=tk.RIGHT, padx=20)
+        self.root.configure(bg="#228B22")
 
-        self.dice_frame = tk.Frame(self.root)
-        self.dice_frame.pack(side=tk.TOP, pady=20)
-        self.dice_buttons = [
-            tk.Button(self.dice_frame, text=f"Dice {i + 1}: ?", width=10, state=tk.DISABLED, command=lambda idx=i: self.toggle_dice_selection(idx))
-            for i in range(5)
-        ]
-        for btn in self.dice_buttons:
-            btn.pack(side=tk.LEFT, padx=5)
+        main_frame = tk.Frame(self.root, bg="#228B22", padx=10, pady=10)
+        main_frame.pack(fill=tk.BOTH, expand=True)
 
-        self.roll_button = tk.Button(self.root, text="Roll Dice", command=self.handle_turn)
-        self.roll_button.pack(side=tk.TOP, pady=10)
+        center_panel = self.create_center_panel(main_frame)
+        right_panel = self.create_right_panel(main_frame)
+        bottom_panel = self.create_bottom_panel()
 
-        self.reroll_button = tk.Button(self.root, text="Reroll Selected Dice", command=self.reroll_dice, state=tk.DISABLED)
-        self.reroll_button.pack(side=tk.TOP, pady=5)
-        self.skip_reroll_button = tk.Button(self.root, text="Keep Dice and Choose Category", command=self.skip_reroll, state=tk.DISABLED)
-        self.skip_reroll_button.pack(side=tk.TOP, pady=5)
-
-        self.category_frame = tk.Frame(self.root)
-        self.category_frame.pack(side=tk.TOP, pady=10)
-        self.category_buttons = [
-            tk.Button(
-                self.category_frame,
-                text=category.name,
-                command=lambda c=category: self.choose_category(c),
-                state=tk.DISABLED,
-            )
-            for category in self.game.categories
-        ]
-        for btn in self.category_buttons:
-            btn.pack(side=tk.LEFT, padx=5)
-
-        self.action_label = tk.Label(self.root, text=f"{self.current_player.name}'s turn! Roll the dice.")
-        self.action_label.pack(side=tk.TOP, pady=20)
+        self.create_dice_display(center_panel)
+        self.create_control_buttons(center_panel)
+        self.create_scoreboard(right_panel)
+        self.create_scoreboard_bonus_labels(right_panel)
+        self.create_category_buttons(bottom_panel)
 
         self.start_turn()
 
-    def start_turn(self):
-        self.turn_phase = "roll"
-        self.reroll_count = 0
-        self.action_label.config(text=f"{self.current_player.name}'s turn! Roll the dice.")
-        if isinstance(self.current_player, HumanPlayer):
-            self.roll_button.config(state=tk.NORMAL)
-        else:
-            self.disable_category_selection()
-            self.handle_turn()
+    def create_center_panel(self, main_frame):
+        center_panel = tk.Frame(main_frame, bg="#228B22", width=300, padx=15)
+        center_panel.grid(row=0, column=0, sticky="ns")
+        return center_panel
 
-    def handle_turn(self):
-        if self.turn_phase == "roll":
-            self.current_player.state.init()
-            self.update_dice_display()
-            self.turn_phase = "reroll"
-            self.action_label.config(text=f"{self.current_player.name}'s turn! Deciding to reroll or choose a category.")
-            self.roll_button.config(state=tk.DISABLED)
+    def create_right_panel(self, main_frame):
+        right_panel = tk.Frame(main_frame, bg="white", relief="solid", bd=2, padx=10, pady=10)
+        right_panel.grid(row=0, column=1, sticky="nsew", padx=15)
+        return right_panel
 
-            if isinstance(self.current_player, HumanPlayer):
-                self.enable_category_selection()
-                self.enable_reroll_options()
+    def create_bottom_panel(self):
+        bottom_panel = tk.Frame(self.root, bg="#228B22", pady=10)
+        bottom_panel.pack(side=tk.BOTTOM, fill=tk.X)
+        return bottom_panel
+
+    def create_dice_display(self, center_panel):
+        self.dice_frame = tk.Frame(center_panel, bg="#228B22", pady=10)
+        self.dice_frame.pack()
+
+        self.dice_images = {i: tk.PhotoImage(file=f"dice_images/dice_{i}.png") for i in range(1, 7)}
+        self.dice_buttons = []
+
+        for i in range(5):
+            btn = self.create_dice_button(i)
+            self.dice_buttons.append(btn)
+
+    def create_dice_button(self, i):
+        btn = tk.Button(
+            self.dice_frame,
+            image=self.dice_images[1],
+            text=f"Dice {i + 1}",
+            compound="top",
+            width=80,
+            height=80,
+            bg="white",
+            state=tk.DISABLED,
+            command=lambda idx=i: self.toggle_dice_selection(idx)
+        )
+        btn.pack(side=tk.LEFT, padx=10)
+        return btn
+
+    def create_control_buttons(self, center_panel):
+        button_width = 20
+        self.roll_button = self.create_button(center_panel, "Roll Dice", self.handle_turn, "#FF4500", button_width)
+        self.reroll_button = self.create_button(center_panel, "Reroll Selected Dice", self.reroll_dice, "#FFD700", button_width, state=tk.DISABLED)
+        self.skip_reroll_button = self.create_button(center_panel, "Keep Dice and Choose Category", self.skip_reroll, "#6495ED", button_width, state=tk.DISABLED)
+
+        self.action_label = tk.Label(center_panel, text="", font=("Arial", 12), fg="white", bg="#228B22")
+        self.action_label.pack(pady=5)
+
+    def create_button(self, parent, text, command, bg_color, width, state=tk.NORMAL):
+        button = tk.Button(
+            parent,
+            text=text,
+            command=command,
+            bg=bg_color,
+            fg="white",
+            font=("Arial", 12, "bold"),
+            relief="raised",
+            bd=3,
+            width=width,
+            state=state
+        )
+        button.pack(pady=5, fill=tk.X)
+        return button
+
+    def create_scoreboard(self, right_panel):
+        tk.Label(
+            right_panel,
+            text="Scoreboard",
+            font=("Arial", 16, "bold"),
+            fg="black",
+            bg="white"
+        ).grid(row=0, column=0, columnspan=3, pady=5)
+
+        self.create_scoreboard_headers(right_panel)
+        self.create_scoreboard_labels(right_panel)
+
+    def create_scoreboard_headers(self, right_panel):
+        tk.Label(
+            right_panel,
+            text="Category",
+            font=("Arial", 14, "bold"),
+            fg="black",
+            bg="white",
+            relief="solid",
+            bd=1
+        ).grid(row=1, column=0, sticky="nsew", padx=3, pady=3)
+
+        tk.Label(
+            right_panel,
+            text=self.game.player1.name,
+            font=("Arial", 14, "bold"),
+            fg="black",
+            bg="white",
+            relief="solid",
+            bd=1
+        ).grid(row=1, column=1, sticky="nsew", padx=3, pady=3)
+
+        tk.Label(
+            right_panel,
+            text=self.game.player2.name,
+            font=("Arial", 14, "bold"),
+            fg="black",
+            bg="white",
+            relief="solid",
+            bd=1
+        ).grid(row=1, column=2, sticky="nsew", padx=3, pady=3)
+
+    def create_scoreboard_labels(self, right_panel):
+        self.score_labels = {}
+        for idx, category in enumerate(self.categories, start=2):
+            self.create_category_score_labels(right_panel, idx, category)
+
+    def create_category_score_labels(self, right_panel, idx, category):
+        tk.Label(
+            right_panel,
+            text=category.name,
+            font=("Arial", 12),
+            fg="black",
+            bg="white",
+            relief="solid",
+            bd=1
+        ).grid(row=idx, column=0, sticky="nsew", padx=3, pady=3)
+
+        p1_label = tk.Label(
+            right_panel,
+            text="0",
+            font=("Arial", 12),
+            fg="black",
+            bg="white",
+            relief="solid",
+            bd=1
+        )
+        p1_label.grid(row=idx, column=1, sticky="nsew", padx=3, pady=3)
+
+        p2_label = tk.Label(
+            right_panel,
+            text="0",
+            font=("Arial", 12),
+            fg="black",
+            bg="white",
+            relief="solid",
+            bd=1
+        )
+        p2_label.grid(row=idx, column=2, sticky="nsew", padx=3, pady=3)
+
+        self.score_labels[category.name] = (p1_label, p2_label)
+
+    def create_scoreboard_bonus_labels(self, right_panel):
+        bonus_row = len(self.categories) + 2
+        tk.Label(
+            right_panel,
+            text="Bonus",
+            font=("Arial", 12, "bold"),
+            fg="black",
+            bg="white",
+            relief="solid",
+            bd=1
+        ).grid(row=bonus_row, column=0, sticky="nsew", padx=3, pady=3)
+
+        self.bonus_p1_label = tk.Label(
+            right_panel,
+            text="0",
+            font=("Arial", 12),
+            fg="black",
+            bg="white",
+            relief="solid",
+            bd=1
+        )
+        self.bonus_p1_label.grid(row=bonus_row, column=1, sticky="nsew", padx=3, pady=3)
+
+        self.bonus_p2_label = tk.Label(
+            right_panel,
+            text="0",
+            font=("Arial", 12),
+            fg="black",
+            bg="white",
+            relief="solid",
+            bd=1
+        )
+        self.bonus_p2_label.grid(row=bonus_row, column=2, sticky="nsew", padx=3, pady=3)
+
+    def create_category_buttons(self, bottom_panel):
+        tk.Label(
+            bottom_panel,
+            text="Choose a Category",
+            font=("Arial", 14, "bold"),
+            fg="white",
+            bg="#228B22"
+        ).pack(side=tk.TOP, pady=5)
+
+        category_frame = tk.Frame(bottom_panel, bg="#228B22")
+        category_frame.pack(pady=5)
+
+        self.category_buttons = [
+            self.create_category_button(category, category_frame)
+            for category in self.game.categories
+        ]
+
+        for idx, btn in enumerate(self.category_buttons):
+            row = idx // 6
+            col = idx % 6
+            btn.grid(row=row, column=col, padx=3, pady=3, sticky="nsew")
+
+    def create_category_button(self, category, category_frame):
+        return tk.Button(
+            category_frame,
+            text=category.name,
+            command=lambda c=category: self.choose_category(c),
+            state=tk.DISABLED,
+            bg="#FF6347",
+            fg="white",
+            font=("Arial", 10, "bold"),
+            relief="raised",
+            bd=2,
+            width=15
+        )
+
+    def enable_category_selection(self):
+        for btn in self.category_buttons:
+            if btn["text"] in self.valid_categories:
+                btn.config(state=tk.NORMAL, bg="#32CD32")
+
+    def disable_category_selection(self):
+        for btn in self.category_buttons:
+            btn.config(state=tk.DISABLED, bg="#FF6347")
+
+    def enable_reroll_options(self):
+        self.reroll_button.config(state=tk.NORMAL)
+        self.skip_reroll_button.config(state=tk.NORMAL)
+        self.enable_dice_selection()
+
+    def disable_reroll_options(self):
+        self.reroll_button.config(state=tk.DISABLED)
+        self.skip_reroll_button.config(state=tk.DISABLED)
+        for btn in self.dice_buttons:
+            btn.config(state=tk.DISABLED)
+
+    def enable_dice_selection(self):
+        for idx, btn in enumerate(self.dice_buttons):
+            if not self.dice_selected[idx]:
+                btn.config(state=tk.NORMAL, bg="white")
             else:
-                self.execute_ai_decision()
+                btn.config(state=tk.NORMAL, bg="red")
 
-    def execute_ai_decision(self):
-        self.turn_phase = "choose_category"
-        self.action_label.config(text=f"{self.current_player.name} is choosing a category.")
-        self.current_player.chose_category()
-        self.update_scores()
-        self.switch_turn()
+    def get_selected_dice_indices(self):
+        return [idx for idx, selected in enumerate(self.dice_selected) if selected]
+
+    def update_dice_display(self):
+        for i, val in enumerate(self.current_player.state.dice):
+            self.dice_buttons[i].config(image=self.dice_images[val])
+
+    def update_scores(self):
+        for category in self.categories:
+            p1_score = self.game.player1.state.scores[category]
+            p2_score = self.game.player2.state.scores[category]
+
+            self.score_labels[category.name][0].config(text=p1_score)
+            self.score_labels[category.name][1].config(text=p2_score)
+
+            if self.game.player1.state.scores[category] is not None:
+                self.score_labels[category.name][0].config(bg="#98FB98")
+            else:
+                self.score_labels[category.name][0].config(bg="white")
+
+            if self.game.player2.state.scores[category] is not None:
+                self.score_labels[category.name][1].config(bg="#98FB98")
+            else:
+                self.score_labels[category.name][1].config(bg="white")
+
+        p1_bonus = self.game.player1.get_bonus()
+        p2_bonus = self.game.player2.get_bonus()
+        self.bonus_p1_label.config(text=p1_bonus)
+        self.bonus_p2_label.config(text=p2_bonus)
+
+        if p1_bonus != 0:
+            self.bonus_p1_label.config(bg="#98FB98")
+        else:
+            self.bonus_p1_label.config(bg="white")
+
+        if p2_bonus != 0:
+            self.bonus_p2_label.config(bg="#98FB98")
+        else:
+            self.bonus_p2_label.config(bg="white")
+
+    def toggle_dice_selection(self, idx):
+        self.dice_selected[idx] = not self.dice_selected[idx]
+        btn = self.dice_buttons[idx]
+        if self.dice_selected[idx]:
+            btn.config(bg="red")
+        else:
+            btn.config(bg="white")
 
     def reroll_dice(self):
         self.enable_reroll_options()
@@ -152,46 +448,6 @@ class YahtzeeGUI:
         self.enable_category_selection()
         self.action_label.config(text=f"{self.current_player.name}, choose a category.")
 
-    def toggle_dice_selection(self, idx):
-        btn = self.dice_buttons[idx]
-        current_text = btn["text"]
-        if "SELECTED" in current_text:
-            btn.config(text=current_text.replace(" SELECTED", ""))
-        else:
-            btn.config(text=current_text + " SELECTED")
-
-    def enable_reroll_options(self):
-        self.reroll_button.config(state=tk.NORMAL)
-        self.skip_reroll_button.config(state=tk.NORMAL)
-        self.enable_dice_selection()
-
-    def disable_reroll_options(self):
-        self.reroll_button.config(state=tk.DISABLED)
-        self.skip_reroll_button.config(state=tk.DISABLED)
-        for btn in self.dice_buttons:
-            btn.config(state=tk.DISABLED)
-
-    def enable_dice_selection(self):
-        for btn in self.dice_buttons:
-            btn.config(state=tk.NORMAL)
-
-    def get_selected_dice_indices(self):
-        return [idx for idx, btn in enumerate(self.dice_buttons) if "SELECTED" in btn["text"]]
-
-    def update_dice_display(self):
-        for idx, dice_value in enumerate(self.current_player.state.dice):
-            btn = self.dice_buttons[idx]
-            btn.config(state=tk.NORMAL, text=f"Dice {idx + 1}: {dice_value}")
-
-    def enable_category_selection(self):
-        for btn in self.category_buttons:
-            if btn["text"] in self.valid_categories:
-                btn.config(state=tk.NORMAL)
-
-    def disable_category_selection(self):
-        for btn in self.category_buttons:
-            btn.config(state=tk.DISABLED)
-
     def choose_category(self, category):
         if category.name in self.valid_categories:
             self.valid_categories.remove(category.name)
@@ -202,6 +458,50 @@ class YahtzeeGUI:
         self.current_player.chose_category(category.name)
         self.update_scores()
         self.switch_turn()
+
+    def execute_ai_decision(self):
+        self.turn_phase = "choose_category"
+        self.action_label.config(text=f"{self.current_player.name} is choosing a category.")
+        self.current_player.chose_category()
+        self.update_scores()
+        self.switch_turn()
+
+    def get_winner(self):
+        p1_score = self.game.player1.get_score()
+        p2_score = self.game.player2.get_score()
+        if p1_score > p2_score:
+            return self.game.player1.name
+        elif p1_score < p2_score:
+            return self.game.player2.name
+        else:
+            return "It's a tie"
+
+    def start_turn(self):
+        self.turn_phase = "roll"
+        self.reroll_count = 0
+        self.dice_selected = [False] * 5
+        for btn in self.dice_buttons:
+            btn.config(bg="white")
+        self.action_label.config(text=f"{self.current_player.name}'s turn! Roll the dice.")
+        if isinstance(self.current_player, HumanPlayer):
+            self.roll_button.config(state=tk.NORMAL)
+        else:
+            self.disable_category_selection()
+            self.handle_turn()
+
+    def handle_turn(self):
+        if self.turn_phase == "roll":
+            self.current_player.state.init()
+            self.update_dice_display()
+            self.turn_phase = "reroll"
+            self.action_label.config(
+                text=f"{self.current_player.name}'s turn! Deciding to reroll or choose a category.")
+            self.roll_button.config(state=tk.DISABLED)
+
+            if isinstance(self.current_player, HumanPlayer):
+                self.enable_reroll_options()
+            else:
+                self.execute_ai_decision()
 
     def switch_turn(self):
         self.current_player = (
@@ -214,19 +514,17 @@ class YahtzeeGUI:
 
     def end_game(self):
         winner = self.get_winner()
-        self.action_label.config(text=f"Game over! {winner} wins!")
-        messagebox.showinfo("Game Over", f"{winner} wins!")
-
-    def update_scores(self):
-        self.player1_score.config(text=f"{self.game.player1.name}: {self.game.player1.get_score()}")
-        self.player2_score.config(text=f"{self.game.player2.name}: {self.game.player2.get_score()}")
-
-    def get_winner(self):
         p1_score = self.game.player1.get_score()
         p2_score = self.game.player2.get_score()
-        if p1_score > p2_score:
-            return self.game.player1.name
-        elif p1_score < p2_score:
-            return self.game.player2.name
+        if winner == "It's a tie":
+            self.action_label.config(text="Game over! It's a tie!")
+            messagebox.showinfo(
+                "Game Over",
+                f"It's a tie!\n\nFinal Scores:\nPlayer 1: {p1_score}\nPlayer 2: {p2_score}"
+            )
         else:
-            return "It's a tie"
+            self.action_label.config(text=f"Game over! {winner} wins!")
+            messagebox.showinfo(
+                "Game Over",
+                f"{winner} wins!\n\nFinal Scores:\nPlayer 1: {p1_score}\nPlayer 2: {p2_score}"
+            )
