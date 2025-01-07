@@ -1,13 +1,18 @@
+from __future__ import annotations
 
 from collections import defaultdict
 
 import langdetect
 import nltk
 import numpy as np
+from nltk import word_tokenize, ngrams
+from numpy import random
 from rake_nltk import Rake
 
+from typing import TYPE_CHECKING
 
-from nlp.wordnet import WordNet
+if TYPE_CHECKING:
+    from nlp.wordnet import WordNet
 
 LANGUAGE_THRESHOLD = 0.25
 LANGUAGE_PROB_MULTIPLIER = 1.5
@@ -41,6 +46,40 @@ def tokenize_text(text):
     return nltk.word_tokenize(text)
 
 
+def get_context_vector(sentence, target_word, stop_words):
+    words = [w.lower() for w in word_tokenize(sentence)
+             if w.lower() not in stop_words]
+    context_vector = defaultdict(int)
+
+    for word in words:
+        if word != target_word.lower():
+            context_vector[word] += 1
+    return context_vector
+
+
+def get_synset_vector(synset_definition, stop_words):
+    vector = defaultdict(int)
+    for word in word_tokenize(synset_definition):
+        word = word.lower()
+        if word not in stop_words:
+            vector[word] += 1
+    return vector
+
+
+def vector_similarity(vec1, vec2):
+    words = set(vec1.keys()) | set(vec2.keys())
+    vec1_array = np.array([vec1.get(word, 0) for word in words])
+    vec2_array = np.array([vec2.get(word, 0) for word in words])
+
+    norm1 = np.linalg.norm(vec1_array)
+    norm2 = np.linalg.norm(vec2_array)
+
+    if norm1 == 0 or norm2 == 0:
+        return 0
+
+    return np.dot(vec1_array, vec2_array) / (norm1 * norm2)
+
+
 def get_stylometric_features(text):
     words = tokenize_text(text)
     words = [word.lower() for word in words]
@@ -63,7 +102,13 @@ def get_stylometric_features(text):
 
 
 def rephrase_text(text, wn: WordNet, syn_ration=0.1, hyper_ration=0.1, ant_ration=0.1):
-    words = tokenize_text(text)
+    sentences = nltk.sent_tokenize(text)
+    sentence_indexes = []
+    words = []
+    for idx, sentence in enumerate(sentences):
+        tokens = nltk.word_tokenize(sentence)
+        sentence_indexes.extend([idx] * len(tokens))
+        words.extend(tokens)
     synonym_count = int(len(words) * syn_ration)
     replaced_indexes = set()
     unavailable_indexes = set()
@@ -73,10 +118,12 @@ def rephrase_text(text, wn: WordNet, syn_ration=0.1, hyper_ration=0.1, ant_ratio
             break
         index = np.random.choice(relevant_indexes)
         word = words[index]
-        synonyms = wn.get_synonyms(word)
+        sentence_index = sentence_indexes[index]
+        sentence = sentences[sentence_index]
+        synonyms = wn.get_synonyms(word, sentence)
         if len(synonyms) == 0:
             unavailable_indexes.add(index)
-            print(f"No synonyms found for '{word}'")
+            # print(f"No synonyms found for '{word}' in sentence: '{sentence}'")
             continue
         synonym = np.random.choice(list(synonyms))
         words[index] = synonym
@@ -92,10 +139,12 @@ def rephrase_text(text, wn: WordNet, syn_ration=0.1, hyper_ration=0.1, ant_ratio
             break
         index = np.random.choice(relevant_indexes)
         word = words[index]
-        antonyms = wn.get_antonyms(word)
+        sentence_index = sentence_indexes[index]
+        sentence = sentences[sentence_index]
+        antonyms = wn.get_antonyms(word, sentence)
         if len(antonyms) == 0:
             unavailable_indexes.add(index)
-            print(f"No antonyms found for '{word}'")
+            # print(f"No antonyms found for '{word}' in sentence: '{sentence}'")
             continue
         antonym = np.random.choice(list(antonyms))
         words[index] = antonym
@@ -113,9 +162,11 @@ def rephrase_text(text, wn: WordNet, syn_ration=0.1, hyper_ration=0.1, ant_ratio
         index = np.random.choice(relevant_indexes)
         word = words[index]
         hypernyms = wn.get_hypernyms(word)
+        sentence_index = sentence_indexes[index]
+        sentence = sentences[sentence_index]
         if len(hypernyms) == 0:
             unavailable_indexes.add(index)
-            print(f"No hypernyms found for '{word}'")
+            # print(f"No hypernyms found for '{word}' in sentence: '{sentence}'")
             continue
         hypernym = np.random.choice(list(hypernyms))
         words[index] = hypernym
@@ -126,7 +177,73 @@ def rephrase_text(text, wn: WordNet, syn_ration=0.1, hyper_ration=0.1, ant_ratio
     return " ".join(words)
 
 
-def extract_keywords(text):
-    r = Rake()
+def extract_keywords(text, language="english", max_length=None):
+    r = Rake(language=language)
     r.extract_keywords_from_text(text)
-    return r.get_ranked_phrases()
+    keywords = r.get_ranked_phrases()
+    if max_length is not None:
+        keywords = keywords[:max_length]
+    return keywords
+
+
+def unify_keywords(keywords, text):
+    modified_keywords = []
+    for keyword in keywords:
+        if ' ' in keyword:
+            new_keyword = keyword.replace(' ', '_')
+            text = text.replace(keyword, new_keyword)
+            modified_keywords.append(new_keyword)
+        else:
+            modified_keywords.append(keyword)
+    return modified_keywords, text
+
+
+def generate_pos_tags(text):
+    words = word_tokenize(text.lower())
+    return nltk.pos_tag(words)
+
+
+def generate_sentence_with_keyword(keyword, pos_tags):
+    structure = "{subject} {verb} {adjective} {object}."
+
+    roles = {
+        'NN': ['subject', 'object'],
+        'NNS': ['subject', 'object'],
+        'NNP': ['subject', 'object'],
+        'NNPS': ['subject', 'object'],
+        'JJ': ['adjective'],
+        'JJS': ['adjective'],
+        'JJR': ['adjective'],
+        'VB': ['verb'],
+        'VBN': ['verb'],
+        'VBG': ['verb'],
+        'VBD': ['verb'],
+        'VBP': ['verb'],
+    }
+    found = False
+    assigned_roles = {}
+    for word, pos in pos_tags:
+        if word == keyword:
+            print(f"Found keyword: {word}, POS: {pos}")
+
+            if pos not in roles:
+                continue
+            role = random.choice(roles[pos])
+            assigned_roles[role] = word
+            found = True
+            break
+    if not found:
+        return None
+    random.shuffle(pos_tags)
+    for word, pos in pos_tags:
+        if pos in roles:
+            for role in roles[pos]:
+                if role not in assigned_roles:
+                    assigned_roles[role] = word
+                    break
+        if len(assigned_roles) == 4:
+            break
+
+    sentence = structure.format(**assigned_roles)
+
+    return sentence.capitalize()
