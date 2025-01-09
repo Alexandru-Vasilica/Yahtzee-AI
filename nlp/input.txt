@@ -1,0 +1,40 @@
+Pasii pentru a juca Yahtzee
+Impartirea carnetului de scor: Fiecare jucator primeste un carnet de scor si se stabilesc regulile jocului.
+Rularea zarurilor: Fiecare jucator ruleaza cinci zaruri in mod repetat, incercand sa obtina o combinatie de puncte.
+Alegerea combinatiei de puncte: Dupa fiecare runda, jucatorul alege ce combinatie de puncte va incerca sa obtina, notand punctajul in carnetul sau de scor.
+Continuarea jocului: Procesul se repeta pana cand fiecare participant a umplut fiecare categorie din carnetul de scor.
+Calcularea punctajului final: Dupa ce toate categoriile din carnetul de scor sunt completate, se aduna punctele fiecarui jucator si cel cu cel mai mare punctaj castiga.
+Este important sa se respecte regulile stabilite inainte de inceperea jocului pentru a obtine un scor corect.
+
+Reguli de baza pentru Yahtzee
+Numar de jucatori: Yahtzee poate fi jucat de la unul la mai multi jucatori.
+Echipament: Jocul necesita cinci zaruri si un carnet de scor.
+Scopul jocului: Scopul jocului este de a obtine un scor mai mare decat adversarii prin combinarea diferitelor valori ale zarurilor.
+Zarurile: Fiecare jucator ruleaza cinci zaruri in mod repetat, incercand sa obtina o combinatie de puncte.
+Alegerea combinatiei de puncte: Dupa fiecare runda, jucatorul alege ce combinatie de puncte va incerca sa obtina, notand punctajul in carnetul sau de scor.
+Notarea punctelor: Punctele obtinute din fiecare runda trebuie notate in carnetul de scor in categoria corespunzatoare.
+Jocul se incheie: Procesul se repeta pana cand fiecare jucator a umplut fiecare categorie din carnetul de scor.
+Stabilirea castigatorilor dupa punctaj: Dupa ce toate categoriile din carnetul de scor sunt completate, se aduna punctele fiecarui jucator si cel cu cel mai mare punctaj castiga.
+Trebuie sa se respecte aceste reguli de baza pentru a juca un joc corect si echitabil de Yahtzee.
+
+Calcularea punctajului si completarea tabelului de scor
+Punctajul la Yahtzee se calculeaza prin adaugarea punctelor obtinute din fiecare categorie din carnetul de scor. Exista 13 categorii diferite in carnetul de scor, fiecare cu o valoare de puncte diferita, care poate fi obtinuta prin combinarea valorilor zarurilor.
+
+Cele 13 categorii din carnetul de scor sunt:
+
+Unu: O valoare de unu pentru fiecare zar cu valoarea 1.
+Doua: O valoare de doua pentru fiecare zar cu valoarea 2.
+Trei: O valoare de trei pentru fiecare zar cu valoarea 3.
+Patru: O valoare de patru pentru fiecare zar cu valoarea 4.
+Cinci: O valoare de cinci pentru fiecare zar cu valoarea 5.
+Sase: O valoare de sase pentru fiecare zar cu valoarea 6.
+Patrat: O valoare de punctaj egala cu suma valorilor tuturor zarurilor.
+Cinci in linie: O valoare de 40 de puncte pentru cinci zaruri consecutive.
+Full House: O valoare de 25 de puncte pentru trei zaruri identice si alte doua zaruri identice diferite.
+Carusel: O valoare de 30 de puncte pentru patru zaruri identice.
+Mica serie: O valoare de 30 de puncte pentru trei zaruri identice consecutive.
+Mare serie: O valoare de 40 de puncte pentru patru zaruri identice consecutive.
+Yahtzee: O valoare de 50 de puncte pentru cinci zaruri identice.
+Punctajul final se calculeaza prin adaugarea punctelor obtinute din fiecare categorie si cel mai mare punctaj castiga jocul. Este important sa se respecte regulile stabilite inainte de inceperea jocului pentru a obtine un scor corect.
+
+Incearca acest joc alaturi de prieteni si familie. Din pacate, el nu prea este popular la multe cazinouri online din Romania, fiind cel mai des practicat in offline, cu diferite ocazii. Este recomandat sa fie o optiune care sa aduca voie buna si distractie. De aceea, este bine daca joci pe bani, sa mentii un joc responsabil si sa nu lasi adrenalina ori emotiile puternice sa intunece judecata si limitele financiare prestabilite.
