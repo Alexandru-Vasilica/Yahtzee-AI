@@ -126,6 +126,7 @@ def rephrase_text(text, wn: WordNet, syn_ration=0.1, hyper_ration=0.1, ant_ratio
             # print(f"No synonyms found for '{word}' in sentence: '{sentence}'")
             continue
         synonym = np.random.choice(list(synonyms))
+        synonym = remove_snake_case(synonym)
         words[index] = synonym
         replaced_indexes.add(index)
         synonym_count -= 1
@@ -147,6 +148,7 @@ def rephrase_text(text, wn: WordNet, syn_ration=0.1, hyper_ration=0.1, ant_ratio
             # print(f"No antonyms found for '{word}' in sentence: '{sentence}'")
             continue
         antonym = np.random.choice(list(antonyms))
+        antonym = remove_snake_case(antonym)
         words[index] = antonym
         replaced_indexes.add(index)
         antonym_count -= 1
@@ -161,14 +163,15 @@ def rephrase_text(text, wn: WordNet, syn_ration=0.1, hyper_ration=0.1, ant_ratio
             break
         index = np.random.choice(relevant_indexes)
         word = words[index]
-        hypernyms = wn.get_hypernyms(word)
         sentence_index = sentence_indexes[index]
         sentence = sentences[sentence_index]
+        hypernyms = wn.get_hypernyms(word, sentence)
         if len(hypernyms) == 0:
             unavailable_indexes.add(index)
             # print(f"No hypernyms found for '{word}' in sentence: '{sentence}'")
             continue
         hypernym = np.random.choice(list(hypernyms))
+        hypernym = remove_snake_case(hypernym)
         words[index] = hypernym
         replaced_indexes.add(index)
         hypernym_count -= 1
@@ -224,12 +227,11 @@ def generate_sentence_with_keyword(keyword, pos_tags):
     assigned_roles = {}
     for word, pos in pos_tags:
         if word == keyword:
-            print(f"Found keyword: {word}, POS: {pos}")
 
             if pos not in roles:
                 continue
             role = random.choice(roles[pos])
-            assigned_roles[role] = word
+            assigned_roles[role] = remove_snake_case(word)
             found = True
             break
     if not found:
@@ -239,7 +241,7 @@ def generate_sentence_with_keyword(keyword, pos_tags):
         if pos in roles:
             for role in roles[pos]:
                 if role not in assigned_roles:
-                    assigned_roles[role] = word
+                    assigned_roles[role] = remove_snake_case(word)
                     break
         if len(assigned_roles) == 4:
             break
@@ -247,3 +249,7 @@ def generate_sentence_with_keyword(keyword, pos_tags):
     sentence = structure.format(**assigned_roles)
 
     return sentence.capitalize()
+
+
+def remove_snake_case(text):
+    return ' '.join(text.split('_'))
