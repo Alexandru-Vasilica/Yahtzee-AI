@@ -171,7 +171,6 @@ def rephrase_text(text, wn: WordNet, syn_ration=0.1, hyper_ration=0.1, ant_ratio
             # print(f"No hypernyms found for '{word}' in sentence: '{sentence}'")
             continue
         hypernym = np.random.choice(list(hypernyms))
-        hypernym = remove_snake_case(hypernym)
         words[index] = hypernym
         replaced_indexes.add(index)
         hypernym_count -= 1

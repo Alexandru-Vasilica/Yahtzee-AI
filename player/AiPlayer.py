@@ -7,7 +7,7 @@ from state.Category import Category
 from player.Player import Player
 from state.State import transition
 from utils.dice import check_yahtzee
-from ai.Agent import QTableSerializer
+from ai.Environment import QTableSerializer
 
 
 class AiPlayer(Player):
