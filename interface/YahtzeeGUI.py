@@ -1,7 +1,9 @@
 import tkinter as tk
+from time import sleep
 from tkinter import messagebox
 from game.YahtzeeGame import YahtzeeGame
 from player.HumanPlayer import HumanPlayer
+from state.Action import ASSIGN_ACTION_BOUNDARY
 
 
 class YahtzeeGUI:
@@ -460,10 +462,17 @@ class YahtzeeGUI:
         self.switch_turn()
 
     def execute_ai_decision(self):
+        self.current_player.action = self.current_player.strategy.choose_action(self.current_player.state)
+        while self.current_player.get_rerolls() is not None:
+            sleep(2)
+            self.current_player.handle_rerolls()
+            self.update_dice_display()
+
         self.turn_phase = "choose_category"
         self.action_label.config(text=f"{self.current_player.name} is choosing a category.")
         self.current_player.chose_category()
         self.update_scores()
+        sleep(2)
         self.switch_turn()
 
     def get_winner(self):

@@ -1,122 +1,173 @@
-import pickle
-from collections import defaultdict
-import matplotlib.pyplot as plt
+import torch
+import torch.nn as nn
+import torch.optim as optim
 import numpy as np
+from collections import deque
+import random
 
-from ai import HyperParameters
-from state.Action import Action, get_action_from_index, ACTION_SIZE
-from state.Category import Category, categories
-from state.State import State, get_starting_state, transition
+from state.Action import ACTION_SIZE, get_action_from_index
+from state.State import State, transition
+
+device = torch.device("cpu")
+
+INPUT_DIM = 23
+OUTPUT_DIM = ACTION_SIZE
 
 
-class QTableSerializer:
+class QNetwork(nn.Module):
+    def __init__(self):
+        super(QNetwork, self).__init__()
+        self.l1 = nn.Linear(INPUT_DIM, 64)
+        self.l2 = nn.Linear(64, 128)
+        self.l3 = nn.Linear(128, 64)
+        self.l4 = nn.Linear(64, OUTPUT_DIM)
+
+        nn.init.xavier_uniform_(self.l1.weight)
+        nn.init.xavier_uniform_(self.l2.weight)
+        nn.init.xavier_uniform_(self.l3.weight)
+        nn.init.xavier_uniform_(self.l4.weight)
+
+        self.to(device)
+
+    def forward(self, x):
+        if x.dim() == 1:
+            x = x.unsqueeze(0)
+        x = x.to(device)
+
+        x = torch.relu(self.l1(x))
+        x = torch.relu(self.l2(x))
+        x = torch.relu(self.l3(x))
+        x = self.l4(x)
+        return x
+
+
+class ReplayBuffer:
+    def __init__(self, capacity):
+        self.buffer = deque(maxlen=capacity)
+
+    def add(self, state, action, reward, next_state, done):
+        self.buffer.append((state, action, reward, next_state, done))
+
+    def sample(self, batch_size):
+        return random.sample(self.buffer, batch_size)
+
+    def __len__(self):
+        return len(self.buffer)
+
+
+class QLearningAgent:
+    def __init__(self, gamma=0.9, epsilon=1.0, epsilon_min=0.1, epsilon_decay=0.00001,
+                 lr=0.00025, replay_buffer_capacity=50000):
+        self.input_dim = INPUT_DIM
+        self.output_dim = OUTPUT_DIM
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.epsilon_min = epsilon_min
+        self.epsilon_decay = epsilon_decay
+        self.q_network = QNetwork()
+        self.target_network = QNetwork()
+        self.target_network.load_state_dict(self.q_network.state_dict())
+        self.optimizer = optim.Adam(self.q_network.parameters(), lr=lr)
+        self.replay_buffer = ReplayBuffer(capacity=replay_buffer_capacity)
+        self.mode = 'train'
+        self.steps = 0
+
     @staticmethod
-    def save(q_table: dict[State, np.ndarray], path: str):
-        try:
-            serializable_q_table = dict(q_table)
-            with open(path, 'wb') as file:
-                pickle.dump(serializable_q_table, file)
-            print(f"Q-table successfully saved to {path}")
-        except Exception as e:
-            print(f"Error saving Q-table: {e}")
+    def _display_action_scores(q_values):
+        for i, q_value in enumerate(q_values):
+            if q_value != float('-inf'):
+                print(f"{i}: {q_value}")
 
-    @staticmethod
-    def load(path: str) -> dict[State, np.ndarray]:
-        try:
-            with open(path, 'rb') as file:
-                q_table = pickle.load(file)
-            print(f"Q-table successfully loaded from {path}")
-            return defaultdict(lambda: np.zeros(ACTION_SIZE), q_table)
-        except Exception as e:
-            print(f"Error loading Q-table: {e}")
-            return defaultdict(lambda: np.zeros(ACTION_SIZE))
+    def _evaluate_decision(self, state: State, action_index: int):
+        action = get_action_from_index(action_index)
+        next_state = transition(state, action)
+        score_diff = next_state.get_score() - state.get_score()
+        max_score_gain = 0
+        max_category = None
+        for category in state.scores.keys():
+            if state.scores[category] is not None:
+                continue
+            possible_action = get_action_from_index(category.index)
+            possible_next_state = transition(state, possible_action)
+            possible_score_diff = possible_next_state.get_score() - state.get_score()
+            if possible_score_diff > max_score_gain:
+                max_score_gain = possible_score_diff
+                max_category = category
+        if score_diff < max_score_gain / 2:
+            print(f"Decision: {action} is not optimal. Max score gain: {max_score_gain} from {max_category}")
+            return max_category.index
+        return action_index
 
+    def choose_action(self, state: State):
+        valid_actions = [action.index for action in state.get_valid_actions()]
+        if np.random.rand() < self.epsilon and self.mode == 'train':
+            return np.random.choice(valid_actions)
+        state_tensor = torch.FloatTensor(state.to_features()).to(device)
+        q_values = self.q_network(state_tensor).squeeze(0)
+        mask = torch.full_like(q_values, float('-inf'))
+        mask[valid_actions] = 0
+        q_values = q_values + mask
+        # self._display_action_scores(q_values)
+        action_index = torch.argmax(q_values).item()
+        if self.mode == 'eval':
+            action_index = self._evaluate_decision(state, action_index)
+        return action_index
 
-class Agent:
-    q_table: dict[State, np.ndarray]
-    alpha: float
-    gamma: float
-    epsilon: float
-    state: State
+    def update_target_network(self):
+        self.target_network.load_state_dict(self.q_network.state_dict())
 
-    def __init__(self, action_size: int, hyperparameters: HyperParameters, categories: list[Category]):
-        self.q_table = defaultdict(lambda: np.zeros(action_size))
-        self.alpha = hyperparameters['alpha']
-        self.gamma = hyperparameters['gamma']
-        self.epsilon = hyperparameters['epsilon_start']
-        self.epsilon_min = hyperparameters['epsilon_min']
-        self.epsilon_decay = hyperparameters['epsilon_decay']
-        self.state = get_starting_state(categories)
+    def train(self, batch_size):
+        if len(self.replay_buffer) < batch_size:
+            return
+        batch = self.replay_buffer.sample(batch_size)
+        states, actions, rewards, next_states, dones = zip(*batch)
+        states = np.array(states)
+        next_states = np.array(next_states)
+        states = torch.FloatTensor(states).to(device)
+        actions = torch.LongTensor(actions).to(device)
+        rewards = torch.FloatTensor(rewards).to(device)
+        next_states = torch.FloatTensor(next_states).to(device)
+        dones = torch.FloatTensor(dones).to(device)
 
-    def choose_action(self) -> Action:
-        valid_actions = self.state.get_valid_actions()
-        if np.random.rand() < self.epsilon:
-            action_index = np.random.choice(len(valid_actions))
-            action = valid_actions[action_index]
-        else:
-            q_values = np.array([self.q_table[self.state][action.index] for action in valid_actions])
-            best_action_index = np.argmax(q_values)
-            action = valid_actions[best_action_index]
-        return action
+        q_values = self.q_network(states)
 
-    def update(self, action: Action):
-        next_state = transition(self.state, action)
-        reward = next_state.get_score() - self.state.get_score()
-        if next_state.is_final():
-            td_target = reward
-        else:
-            next_valid_actions = next_state.get_valid_actions()
-            nex_action_outcomes = {action: self.q_table[next_state][action.index] for action in next_valid_actions}
-            best_next_action = max(nex_action_outcomes, key=nex_action_outcomes.get)
-            td_target = reward + self.gamma * self.q_table[next_state][best_next_action.index]
-        td_error = td_target - self.q_table[self.state][action.index]
-        self.q_table[self.state][action.index] += self.alpha * td_error
-        self.state = next_state
-        return reward
+        q_values = q_values.gather(1, actions.unsqueeze(1)).squeeze(1)
 
-    def display_table(self):
-        for state, q_values in self.q_table.items():
-            print(f"State: {state}")
-            print(f"Q-Values: {q_values}")
+        with torch.no_grad():
+            next_q_values = self.q_network(next_states).max(1)[0]
 
-    def evaluate_agent(self, episodes: int):
-        visited_states = len(self.q_table.keys())
-        return visited_states
+            target_q_values = rewards + self.gamma * next_q_values * (1 - dones)
 
-    def save_q_table(self, path: str):
-        QTableSerializer.save(self.q_table, path)
+        loss = nn.MSELoss()(q_values, target_q_values)
 
-    def load_q_table(self, path: str):
-        self.q_table = QTableSerializer.load(path)
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
 
-    def display_policy(self):
-        print("Optimal Policy:")
-        for state, q_values in self.q_table.items():
-            best_action_index = int(np.argmax(q_values))
-            best_action = get_action_from_index(best_action_index)
-            print(f"State: {state} -> Best Action: {best_action}")
+        self.steps += 1
+        if self.steps % 100 == 0:
+            self.update_target_network()
 
+        if self.epsilon > self.epsilon_min:
+            self.epsilon -= self.epsilon_decay
 
-def train_agent(hyperparameters: HyperParameters):
-    agent = Agent(ACTION_SIZE, hyperparameters, categories)
-    rewards_per_episode = []
-    for episode in range(hyperparameters['episodes']):
-        agent.state.reset()
-        total_reward = 0
-        while not agent.state.is_final():
-            action = agent.choose_action()
-            reward = agent.update(action)
-            total_reward += reward
-        rewards_per_episode.append(total_reward)
-        if (episode + 1) % 50000 == 0:
-            agent.save_q_table("q_table150k.pkl")
-            print(f'Episode {episode + 1}/{hyperparameters["episodes"]} - Total Score: {agent.state.get_score()}')
-        agent.epsilon = max(agent.epsilon_min, agent.epsilon * agent.epsilon_decay)
+    def save(self, filepath):
+        state = {
+            'q_network_state_dict': self.q_network.state_dict(),
+            'optimizer_state_dict': self.optimizer.state_dict(),
+            'epsilon': self.epsilon,
+            'epsilon_min': self.epsilon_min,
+            'epsilon_decay': self.epsilon_decay,
+        }
+        torch.save(state, filepath)
+        print(f"Agent saved to {filepath}")
 
-    print(f'Average score: {agent.evaluate_agent(hyperparameters["episodes"])}')
-    plt.plot(range(1, hyperparameters['episodes'] + 1), rewards_per_episode)
-    plt.xlabel('Episode')
-    plt.ylabel('Total Reward')
-    plt.title('Convergence of Q-Learning')
-    plt.savefig('chart.png')
-    plt.show()
+    def load(self, filepath):
+        state = torch.load(filepath)
+        self.q_network.load_state_dict(state['q_network_state_dict'])
+        self.target_network.load_state_dict(self.q_network.state_dict())
+        self.optimizer.load_state_dict(state['optimizer_state_dict'])
+        self.epsilon = state['epsilon']
+        self.epsilon_min = state['epsilon_min']
+        self.epsilon_decay = state['epsilon_decay']
+        print(f"Agent loaded from {filepath}")

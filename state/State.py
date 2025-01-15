@@ -6,6 +6,9 @@ from state import Category, Action
 from state.Action import get_action_from_index, ASSIGN_ACTION_BOUNDARY
 from state.Category import DiceValueCategory
 from utils.dice import roll_dice
+import numpy as np
+
+UPPER_SECTION_BONUS_BOUNDARY = 63
 
 
 def check_yahtzee(dice: list[int]) -> bool:
@@ -47,7 +50,7 @@ class State:
         for category in self.scores.keys():
             if isinstance(category, DiceValueCategory) and self.scores[category] is not None:
                 score += self.scores[category]
-        if score >= 63:
+        if score >= UPPER_SECTION_BONUS_BOUNDARY:
             bonus = 35
         yahtzee_bonus = 0 if self.yahtzee_count == 0 else (self.yahtzee_count - 1) * 100
         return bonus + yahtzee_bonus
@@ -65,6 +68,18 @@ class State:
                 actions.append(get_action_from_index(ASSIGN_ACTION_BOUNDARY + i))
         return actions
 
+    def get_scoring_opportunities(self) -> int:
+        return len([category for category in self.scores.keys() if category.get_score(self.dice) > 0])
+
+    def get_potential_score(self) -> int:
+        potential_score = []
+        for category in self.scores.keys():
+            if self.scores[category] is None:
+                action = get_action_from_index(category.index)
+                potential_state = transition(self, action)
+                potential_score.append(potential_state.get_score() - self.get_score())
+        return max(potential_score, default=0)
+
     def __hash__(self):
         return hash((tuple(score is not None for score in self.scores.values()), tuple(self.dice), self.rerolls_left))
 
@@ -73,6 +88,38 @@ class State:
 
     def __str__(self):
         return f'State(scores={self._scores_to_string()}, yahtzee_count={self.yahtzee_count}, dice={self.dice}, rerolls_left={self.rerolls_left})'
+
+    def to_features(self) -> np.ndarray:
+        """
+        Converts the state to a feature vector containing the following features:
+        - 13 features for each category (1 if the category is not scored yet, 0 otherwise)
+        - 6 features for each dice value (number of dice with the value normalized by 5)
+        - 1 feature for the number of rerolls left (normalized by 2)
+        - 1 feature for the upper section score (normalized by 63)
+        - 1 feature for the number of remaining upper section categories (normalized by 6)
+        - 1 feature for the Yahtzee feature (1 if the dice is a Yahtzee, 0 otherwise)
+        :return: a numpy array containing 23 features
+        """
+        features = []
+        for category in self.scores.keys():
+            features.append(1 if self.scores[category] is not None else 0)
+        dice_features = [0] * 6
+        for die in self.dice:
+            dice_features[die - 1] += 1
+        features.extend([value / 5 for value in dice_features])
+        features.append(self.rerolls_left / 2)
+        upper_section_score = 0
+        for category in self.scores.keys():
+            if isinstance(category, DiceValueCategory) and self.scores[category] is not None:
+                upper_section_score += self.scores[category]
+        remaining_upper_section_categories = len([category for category in self.scores.keys() if
+                                                  isinstance(category, DiceValueCategory) and self.scores[
+                                                      category] is None])
+        features.append(upper_section_score / UPPER_SECTION_BONUS_BOUNDARY)
+        features.append(remaining_upper_section_categories / 6)
+        yahtzee_feature = 1 if check_yahtzee(self.dice) else 0
+        features.append(yahtzee_feature)
+        return np.array(features, dtype=np.float32)
 
 
 def get_starting_state(categories: list[Category]) -> State:

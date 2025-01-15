@@ -1,6 +1,7 @@
 from player.AiPlayer import AiPlayer
 from player.HumanPlayer import HumanPlayer
 from player.Player import Player
+from player.Strategy import AgentStrategy, MinMaxStrategy
 from state.Category import Category
 
 
@@ -12,7 +13,8 @@ class YahtzeeGame:
     def __init__(self, name: str, categories: list[Category]):
         #name = input('Enter your name: ')
         self.player1 = HumanPlayer(name, categories)
-        self.player2 = AiPlayer('Opponent', categories, "q_table.pkl")
+        strategy = MinMaxStrategy(3)
+        self.player2 = AiPlayer('Opponent', categories, strategy)
         self.categories = categories
 
     def _display_turn_end(self):
