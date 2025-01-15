@@ -42,9 +42,8 @@ class YahtzeeEnvironment:
     def _calculate_reward(previous_state: State, next_state: State, action: Action) -> int:
         if action.index <= ASSIGN_ACTION_BOUNDARY:
             score_gained = next_state.get_score() - previous_state.get_score()
-            potential_score_gain = previous_state.get_potential_score()
-            opportunities = previous_state.get_scoring_opportunities()
-            return score_gained - potential_score_gain / opportunities
+            category = next(category for category in categories if category.index == action.index)
+            return score_gained - category.max_score/2
         else:
             old_potential_score = previous_state.get_potential_score()
             new_potential_score = next_state.get_potential_score()

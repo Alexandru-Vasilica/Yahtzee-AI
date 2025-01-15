@@ -5,8 +5,8 @@ import numpy as np
 from collections import deque
 import random
 
-from state.Action import ACTION_SIZE
-from state.State import State
+from state.Action import ACTION_SIZE, get_action_from_index
+from state.State import State, transition
 
 device = torch.device("cpu")
 
@@ -78,6 +78,26 @@ class QLearningAgent:
             if q_value != float('-inf'):
                 print(f"{i}: {q_value}")
 
+    def _evaluate_decision(self, state: State, action_index: int):
+        action = get_action_from_index(action_index)
+        next_state = transition(state, action)
+        score_diff = next_state.get_score() - state.get_score()
+        max_score_gain = 0
+        max_category = None
+        for category in state.scores.keys():
+            if state.scores[category] is not None:
+                continue
+            possible_action = get_action_from_index(category.index)
+            possible_next_state = transition(state, possible_action)
+            possible_score_diff = possible_next_state.get_score() - state.get_score()
+            if possible_score_diff > max_score_gain:
+                max_score_gain = possible_score_diff
+                max_category = category
+        if score_diff < max_score_gain / 2:
+            print(f"Decision: {action} is not optimal. Max score gain: {max_score_gain} from {max_category}")
+            return max_category.index
+        return action_index
+
     def choose_action(self, state: State):
         valid_actions = [action.index for action in state.get_valid_actions()]
         if np.random.rand() < self.epsilon and self.mode == 'train':
@@ -87,8 +107,11 @@ class QLearningAgent:
         mask = torch.full_like(q_values, float('-inf'))
         mask[valid_actions] = 0
         q_values = q_values + mask
-        self._display_action_scores(q_values)
-        return torch.argmax(q_values).item()
+        # self._display_action_scores(q_values)
+        action_index = torch.argmax(q_values).item()
+        if self.mode == 'eval':
+            action_index = self._evaluate_decision(state, action_index)
+        return action_index
 
     def update_target_network(self):
         self.target_network.load_state_dict(self.q_network.state_dict())
@@ -111,11 +134,11 @@ class QLearningAgent:
         q_values = q_values.gather(1, actions.unsqueeze(1)).squeeze(1)
 
         with torch.no_grad():
-            next_q_values = self.target_network(next_states).max(1)[0]
+            next_q_values = self.q_network(next_states).max(1)[0]
 
             target_q_values = rewards + self.gamma * next_q_values * (1 - dones)
 
-        loss = nn.MSELoss()(q_values, target_q_values.detach())
+        loss = nn.MSELoss()(q_values, target_q_values)
 
         self.optimizer.zero_grad()
         loss.backward()

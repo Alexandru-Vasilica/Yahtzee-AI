@@ -3,7 +3,8 @@ import random
 
 from ai.Agent import QLearningAgent
 from state.Action import Action, get_action_from_index, ASSIGN_ACTION_BOUNDARY, get_action_from_rerolls
-from state.State import State, transition
+from state.Category import categories
+from state.State import State, transition, get_starting_state
 from utils.dice import check_yahtzee
 
 
@@ -22,6 +23,7 @@ class AgentStrategy(Strategy):
         super().__init__()
         self.agent = QLearningAgent()
         self.agent.load(path)
+        self.agent.mode = 'eval'
 
     def choose_action(self, state: State) -> Action:
         action_index = self.agent.choose_action(state)
@@ -64,7 +66,8 @@ class MinMaxStrategy(Strategy):
         for action in state.get_valid_actions():
             new_state = transition(state, action)
             self.max_player_action = action
-            eval_score, _ = self.minmax(new_state, depth - 1, alpha, beta, True if action.index <= ASSIGN_ACTION_BOUNDARY else False)
+            eval_score, _ = self.minmax(new_state, depth - 1, alpha, beta,
+                                        True if action.index <= ASSIGN_ACTION_BOUNDARY else False)
             if eval_score > max_eval:
                 max_eval = eval_score
                 best_action = action
@@ -95,3 +98,15 @@ class MinMaxStrategy(Strategy):
                 break
         expected_value = total_eval / count
         return expected_value, None
+
+
+def run_strategy(strategy: Strategy):
+    state = get_starting_state(categories=categories)
+    while not state.is_final():
+        action = strategy.choose_action(state)
+        print(f'Action: {action.index}')
+        state = transition(state, action)
+    return state.get_score()
+
+
+

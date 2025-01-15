@@ -5,6 +5,7 @@ class Category:
     name: str
     description: str
     index: int
+    max_score: int
 
     def get_score(self, dice: list[int], joker_rule=False) -> int:
         pass
@@ -27,6 +28,7 @@ class DiceValueCategory(Category):
         self.name = name
         self.description = description
         self.value = value
+        self.max_score = 5 * value
 
     def get_score(self, dice: list[int], joker_rule=False) -> int:
         if joker_rule and dice[0] == self.value:
@@ -40,6 +42,7 @@ class Chance(Category):
         self.index = 11
         self.name = 'Chance'
         self.description = 'Sum of all dice'
+        self.max_score = 30
 
     def get_score(self, dice: list[int], joker_rule=False) -> int:
         return sum(dice)
@@ -81,6 +84,7 @@ class ThreeOfAKind(Category):
         self.index = 6
         self.name = 'Three of a Kind'
         self.description = 'Sum of all dice if 3 are the same'
+        self.max_score = 30
 
     def get_score(self, dice: list[int], joker_rule=False) -> int:
         for i in range(1, 7):
@@ -95,6 +99,7 @@ class FourOfAKind(Category):
         self.index = 7
         self.name = 'Four of a Kind'
         self.description = 'Sum of all dice if 4 are the same'
+        self.max_score = 30
 
     def get_score(self, dice: list[int], joker_rule=False) -> int:
         for i in range(1, 7):
@@ -109,6 +114,7 @@ class FullHouse(Category):
         self.index = 8
         self.name = 'Full House'
         self.description = '25 if 3 of a kind and 2 of a kind'
+        self.max_score = 25
 
     def get_score(self, dice: list[int], joker_rule=False) -> int:
         if joker_rule:
@@ -131,6 +137,7 @@ class SmallStraight(Category):
         self.index = 9
         self.name = 'Small Straight'
         self.description = '30 if 4 in a row'
+        self.max_score = 30
 
     def get_score(self, dice: list[int], joker_rule=False) -> int:
         if joker_rule:
@@ -149,6 +156,7 @@ class LargeStraight(Category):
         self.index = 10
         self.name = 'Large Straight'
         self.description = '40 if 5 in a row'
+        self.max_score = 40
 
     def get_score(self, dice: list[int], joker_rule=False) -> int:
         if joker_rule:
@@ -167,6 +175,7 @@ class Yahtzee(Category):
         self.index = 12
         self.name = 'Yahtzee'
         self.description = '50 if all dice are the same'
+        self.max_score = 50
 
     def get_score(self, dice: list[int], joker_rule=False) -> int:
         if len(set(dice)) == 1:

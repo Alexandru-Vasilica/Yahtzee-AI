@@ -16,9 +16,9 @@ hyperparameters = Hyperparameters(
     gamma=0.9,
     epsilon=1.0,
     epsilon_min=0.05,
-    epsilon_decay=0.00001,
+    epsilon_decay=0.000008,
     learning_rate=0.0001,
     batch_size=128,
-    episodes=10_000,
+    episodes=12_000,
     replay_buffer_capacity=100_000
 )
