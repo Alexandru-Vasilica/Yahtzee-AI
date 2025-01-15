@@ -72,6 +72,12 @@ class QLearningAgent:
         self.mode = 'train'
         self.steps = 0
 
+    @staticmethod
+    def _display_action_scores(q_values):
+        for i, q_value in enumerate(q_values):
+            if q_value != float('-inf'):
+                print(f"{i}: {q_value}")
+
     def choose_action(self, state: State):
         valid_actions = [action.index for action in state.get_valid_actions()]
         if np.random.rand() < self.epsilon and self.mode == 'train':
@@ -81,6 +87,7 @@ class QLearningAgent:
         mask = torch.full_like(q_values, float('-inf'))
         mask[valid_actions] = 0
         q_values = q_values + mask
+        self._display_action_scores(q_values)
         return torch.argmax(q_values).item()
 
     def update_target_network(self):

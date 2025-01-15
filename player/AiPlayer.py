@@ -2,7 +2,9 @@ import time
 
 import numpy
 
-from state.Action import get_action_from_rerolls, AssignAction, get_action_from_index, RerollAction
+from player.Strategy import Strategy
+from state.Action import get_action_from_rerolls, AssignAction, get_action_from_index, RerollAction, Action, \
+    ASSIGN_ACTION_BOUNDARY
 from state.Category import Category
 from player.Player import Player
 from state.State import transition
@@ -11,13 +13,17 @@ from ai.Environment import QTableSerializer
 
 
 class AiPlayer(Player):
+    strategy: Strategy
+    action: Action | None
 
-    def __init__(self, name: str, categories: list[Category], q_table_path: str):
+    def __init__(self, name: str, categories: list[Category], strategy):
         super().__init__(name, categories)
-        self.q_table = QTableSerializer.load(q_table_path)
+        self.strategy = strategy
+        self.action = None
 
     def play_turn(self):
         self._display_player_turn()
+        self.action = self.strategy.choose_action(self.state)
         self.handle_rerolls()
         joker_rule = False
         if check_yahtzee(self.state.dice):
@@ -26,39 +32,22 @@ class AiPlayer(Player):
         self.chose_category(joker_rule)
 
     def get_rerolls(self):
-        valid_actions = [
-            action for action in self.state.get_valid_actions()
-            if isinstance(get_action_from_index(action.index), RerollAction)
-        ]
-        if not valid_actions:
+        if self.action.index <= ASSIGN_ACTION_BOUNDARY:
             return None
-        q_values = {action: self.q_table[self.state][action.index] for action in valid_actions}
-        best_action = max(q_values, key=q_values.get)
-        return best_action.rerolls
+        return self.action.rerolls
 
     def handle_rerolls(self):
-        while self.state.rerolls_left > 0:
-            rerolls = self.get_rerolls()
-            if rerolls is None:
-                return
-            time.sleep(2)
-            print(f'Rerolling dice: {rerolls}')
-            action = get_action_from_rerolls(rerolls)
-            self.state = transition(self.state, action)
-            self._display_dice()
+        rerolls = self.get_rerolls()
+        if rerolls is None:
+            return
+        print(f'Rerolling dice: {rerolls}')
+        self.state = transition(self.state, self.action)
+        self._display_dice()
+        self.action = self.strategy.choose_action(self.state)
 
     def chose_category(self, joker_rule=False):
-        valid_actions = [
-            action for action in self.state.get_valid_actions()
-            if isinstance(get_action_from_index(action.index), AssignAction)
-        ]
-        if not valid_actions:
-            return
-        q_values = {action: self.q_table[self.state][action.index] for action in valid_actions}
-        best_action = max(q_values, key=q_values.get)
-        category = next(category for category in self.state.scores.keys() if category.index == best_action.index)
+        category = next((category for category in self.state.scores.keys() if category.index == self.action.index), None)
         old_dice = self.state.dice
-        action = AssignAction(category.index)
-        self.state = transition(self.state, action)
+        self.state = transition(self.state, self.action)
         time.sleep(2)
         self._display_choice(old_dice, category)
