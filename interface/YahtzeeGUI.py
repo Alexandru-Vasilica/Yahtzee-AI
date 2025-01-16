@@ -14,6 +14,7 @@ from database.ScoreActions import GetScore
 class YahtzeeGUI:
     def __init__(self, root, categories):
         self.root = root
+        self.root.title("Yahtzee")
         self.categories = categories
         self.game = None
         self.current_player = None
@@ -25,6 +26,10 @@ class YahtzeeGUI:
 
         self.player1_name_label = None
         self.player1_name_entry = None
+        self.ai_strategy = None
+        self.strategy_label = None
+        self.qagent_checkbox = None
+        self.minmax_checkbox = None
         self.start_button = None
 
         self.bonus_p2_label = None
@@ -80,6 +85,51 @@ class YahtzeeGUI:
         )
         self.player1_name_entry.pack(side=tk.LEFT, padx=10)
 
+        ai_options_frame = tk.Frame(
+            self.root,
+            bg="#228B22"
+        )
+        ai_options_frame.pack(side=tk.TOP, pady=10)
+
+        self.strategy_label = tk.Label(
+            ai_options_frame,
+            text="Select the AI strategy: ",
+            font=("Arial", 14, "bold"),
+            bg="#228B22",
+            fg="white"
+        )
+        self.strategy_label.pack(side=tk.LEFT, padx=10)
+
+        self.ai_strategy = tk.StringVar(value="QAgent")
+
+        self.qagent_checkbox = tk.Checkbutton(
+            ai_options_frame,
+            text="QAgent",
+            variable=self.ai_strategy,
+            onvalue="QAgent",
+            offvalue="",
+            font=("Arial", 12),
+            bg="#228B22",
+            fg="white",
+            selectcolor="#2E8B57",
+            anchor="w"
+        )
+        self.qagent_checkbox.pack(side=tk.LEFT, anchor="w", padx=5, pady=2)
+
+        self.minmax_checkbox = tk.Checkbutton(
+            ai_options_frame,
+            text="MinMax",
+            variable=self.ai_strategy,
+            onvalue="MinMax",
+            offvalue="",
+            font=("Arial", 12),
+            bg="#228B22",
+            fg="white",
+            selectcolor="#2E8B57",
+            anchor="w"
+        )
+        self.minmax_checkbox.pack(side=tk.LEFT, anchor="w", padx=5, pady=2)
+
         self.start_button = tk.Button(
             self.root,
             text="Start Game",
@@ -114,6 +164,11 @@ class YahtzeeGUI:
             tk.messagebox.showerror("Error", "Please enter a name before starting the game.")
             return
 
+        selected_strategy = self.ai_strategy.get()
+        if not selected_strategy:
+            tk.messagebox.showerror("Error", "Please select an AI strategy before starting the game.")
+            return
+
         loading_label = self.create_loading_label()
         loading_label.pack(side=tk.TOP, pady=20)
         self.root.update()
@@ -122,7 +177,7 @@ class YahtzeeGUI:
             self.view_history_button.pack_forget()
 
         try:
-            self.game = YahtzeeGame(player1_name, self.categories)
+            self.game = YahtzeeGame(player1_name, self.categories, selected_strategy)
         except Exception as e:
             tk.messagebox.showerror("Error", f"An error occurred while starting the game: {e}")
             loading_label.destroy()
@@ -194,12 +249,14 @@ class YahtzeeGUI:
         self.player1_name_label.pack_forget()
         self.player1_name_entry.pack_forget()
         self.start_button.pack_forget()
+        self.strategy_label.pack_forget()
+        self.qagent_checkbox.pack_forget()
+        self.minmax_checkbox.pack_forget()
 
     def setup_ui(self):
         self.root.configure(bg="#228B22")
-
-        main_frame = tk.Frame(self.root, bg="#228B22", padx=10, pady=10)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        main_frame = tk.Frame(self.root, bg="#228B22", padx=5, pady=0)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
 
         center_panel = self.create_center_panel(main_frame)
         right_panel = self.create_right_panel(main_frame)
@@ -207,14 +264,15 @@ class YahtzeeGUI:
         bottom_panel = self.create_bottom_panel()
 
         center_panel.grid(row=0, column=0, sticky="nsew")
-        right_panel.grid(row=0, column=1, sticky="nsew", padx=(10, 0))
-        chat_panel.grid(row=0, column=2, sticky="nsew", padx=(10, 0))
+        right_panel.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
+        chat_panel.grid(row=0, column=2, sticky="nsew", padx=(5, 0))
+
         main_frame.grid_columnconfigure(0, weight=3)
         main_frame.grid_columnconfigure(1, weight=2)
         main_frame.grid_columnconfigure(2, weight=1)
         main_frame.grid_rowconfigure(0, weight=1)
 
-        bottom_panel.pack(side=tk.BOTTOM, fill=tk.X)
+        bottom_panel.pack(side=tk.BOTTOM, fill=tk.X, pady=0)
 
         self.create_dice_display(center_panel)
         self.create_control_buttons(center_panel)
@@ -230,7 +288,7 @@ class YahtzeeGUI:
         return center_panel
 
     def create_right_panel(self, main_frame):
-        right_panel = tk.Frame(main_frame, bg="white", relief="solid", bd=2, padx=10, pady=10)
+        right_panel = tk.Frame(main_frame, bg="white", relief="solid", bd=2, padx=10, pady=5)
         right_panel.grid(row=0, column=1, sticky="nsew", padx=15)
         return right_panel
 
@@ -276,7 +334,7 @@ class YahtzeeGUI:
             text="Send",
             command=self.handle_chat_input,
             bg="#6495ED",
-            fg="white",
+            fg="black",
             font=("Arial", 10, "bold"),
             relief="raised"
         )
@@ -286,7 +344,7 @@ class YahtzeeGUI:
         return chat_panel
 
     def create_bottom_panel(self):
-        bottom_panel = tk.Frame(self.root, bg="#228B22", pady=10)
+        bottom_panel = tk.Frame(self.root, bg="#228B22", pady=5)
         bottom_panel.pack(side=tk.BOTTOM, fill=tk.X)
         return bottom_panel
 
