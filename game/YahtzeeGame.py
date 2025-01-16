@@ -10,12 +10,17 @@ class YahtzeeGame:
     player2: Player
     categories: list[Category]
 
-    def __init__(self, name: str, categories: list[Category]):
+    def __init__(self, name: str, categories: list[Category], strategy: str):
         #name = input('Enter your name: ')
         self.player1 = HumanPlayer(name, categories)
-        strategy = MinMaxStrategy(3)
-        self.player2 = AiPlayer('Opponent', categories, strategy)
-        self.categories = categories
+        if strategy == "MinMax":
+            strategy = MinMaxStrategy(3)
+            self.player2 = AiPlayer('Opponent', categories, strategy)
+            self.categories = categories
+        else:
+            strategy = AgentStrategy('agents/agent_best_2.pth')
+            self.player2 = AiPlayer('Opponent', categories, strategy)
+            self.categories = categories
 
     def _display_turn_end(self):
         print(f'----Turn ended----')
