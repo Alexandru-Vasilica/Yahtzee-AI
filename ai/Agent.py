@@ -14,6 +14,8 @@ INPUT_DIM = 23
 OUTPUT_DIM = ACTION_SIZE
 
 
+
+
 class QNetwork(nn.Module):
     def __init__(self):
         super(QNetwork, self).__init__()

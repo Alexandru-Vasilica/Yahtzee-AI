@@ -3,13 +3,17 @@ from time import sleep
 from tkinter import messagebox
 from game.YahtzeeGame import YahtzeeGame
 from player.HumanPlayer import HumanPlayer
-from state.Action import ASSIGN_ACTION_BOUNDARY
+from player.Strategy import AgentStrategy
+from state.Action import ASSIGN_ACTION_BOUNDARY, convert_to_suggestion
 from database.ScoreActions import InsertScore
 from database.ScoreActions import GetScore
+from state.State import transition
 
 
 class YahtzeeGUI:
     def __init__(self, root, categories):
+        self.suggestion_label = None
+        self.human_starting_state = None
         self.root = root
         self.categories = categories
         self.game = None
@@ -17,7 +21,7 @@ class YahtzeeGUI:
         self.dice_selected = [False] * 5
         self.valid_categories = [category.name for category in categories]
         self.reroll_count = 0
-
+        self.suggestion_strategy = AgentStrategy('agents/agent_best_2.pth')
         self.player1_name_label = None
         self.player1_name_entry = None
         self.start_button = None
@@ -122,7 +126,7 @@ class YahtzeeGUI:
         self.current_player = self.game.player1
         self.hide_name_entry_ui()
         self.setup_ui()
-    
+
     def view_history(self):
         player1_name = self.player1_name_entry.get()
         if not player1_name.strip():
@@ -195,6 +199,7 @@ class YahtzeeGUI:
         right_panel = self.create_right_panel(main_frame)
         bottom_panel = self.create_bottom_panel()
 
+        self.create_suggestion_display(center_panel)
         self.create_dice_display(center_panel)
         self.create_control_buttons(center_panel)
         self.create_scoreboard(right_panel)
@@ -217,6 +222,23 @@ class YahtzeeGUI:
         bottom_panel = tk.Frame(self.root, bg="#228B22", pady=10)
         bottom_panel.pack(side=tk.BOTTOM, fill=tk.X)
         return bottom_panel
+
+    def create_suggestion_display(self, center_panel):
+        self.suggestion_frame = tk.Frame(center_panel, bg="#228B22", pady=10,  relief="solid",
+                                         highlightbackground="white", highlightthickness=1)
+        self.suggestion_frame.pack(fill=tk.X)
+        suggestion_title = tk.Label(self.suggestion_frame, text="Suggestion", font=("Arial", 14, "bold"), fg="white",
+                                    bg="#228B22")
+        suggestion_title.pack(pady=5)
+
+        self.suggestion_label = tk.Label(
+            self.suggestion_frame,
+            text="",
+            font=("Arial", 12),
+            fg="white",
+            bg="#228B22"
+        )
+        self.suggestion_label.pack(pady=5)
 
     def create_dice_display(self, center_panel):
         self.dice_frame = tk.Frame(center_panel, bg="#228B22", pady=10)
@@ -246,9 +268,14 @@ class YahtzeeGUI:
 
     def create_control_buttons(self, center_panel):
         button_width = 20
+        self.get_advice_button = self.create_button(center_panel, "Get Advice", self._get_suggestion, "#FF6347",
+                                                    button_width, state=tk.DISABLED)
+
         self.roll_button = self.create_button(center_panel, "Roll Dice", self.handle_turn, "#FF4500", button_width)
-        self.reroll_button = self.create_button(center_panel, "Reroll Selected Dice", self.reroll_dice, "#FFD700", button_width, state=tk.DISABLED)
-        self.skip_reroll_button = self.create_button(center_panel, "Keep Dice and Choose Category", self.skip_reroll, "#6495ED", button_width, state=tk.DISABLED)
+        self.reroll_button = self.create_button(center_panel, "Reroll Selected Dice", self.reroll_dice, "#FFD700",
+                                                button_width, state=tk.DISABLED)
+        self.skip_reroll_button = self.create_button(center_panel, "Keep Dice and Choose Category", self.skip_reroll,
+                                                     "#6495ED", button_width, state=tk.DISABLED)
 
         self.action_label = tk.Label(center_panel, text="", font=("Arial", 12), fg="white", bg="#228B22")
         self.action_label.pack(pady=5)
@@ -527,6 +554,9 @@ class YahtzeeGUI:
                 btn.config(state=tk.DISABLED)
         self.current_player.chose_category(category.name)
         self.update_scores()
+        if isinstance(self.current_player, HumanPlayer):
+            review = self._get_review(self.human_starting_state, self.current_player.state)
+            self._show_suggestion(review)
         self.switch_turn()
 
     def execute_ai_decision(self):
@@ -574,10 +604,12 @@ class YahtzeeGUI:
             self.action_label.config(
                 text=f"{self.current_player.name}'s turn! Deciding to reroll or choose a category.")
             self.roll_button.config(state=tk.DISABLED)
-
             if isinstance(self.current_player, HumanPlayer):
+                self.human_starting_state = self.current_player.state
                 self.enable_reroll_options()
+                self.get_advice_button.config(state=tk.NORMAL)
             else:
+                self.get_advice_button.config(state=tk.DISABLED)
                 self.execute_ai_decision()
 
     def switch_turn(self):
@@ -606,3 +638,27 @@ class YahtzeeGUI:
                 "Game Over",
                 f"{winner} wins!\n\nFinal Scores:\nPlayer 1: {p1_score}\nPlayer 2: {p2_score}"
             )
+
+    def _get_review(self, starting_state, end_state):
+        actions = []
+        suggested_action = self.suggestion_strategy.choose_action(starting_state)
+        actions.append(suggested_action)
+        next_state = transition(starting_state, suggested_action)
+        while suggested_action.index > ASSIGN_ACTION_BOUNDARY:
+            suggested_action = self.suggestion_strategy.choose_action(next_state)
+            actions.append(suggested_action)
+            next_state = transition(next_state, suggested_action)
+        outcome = next_state.get_score() - end_state.get_score()
+        if outcome < -20:
+            return "Really good move!"
+        action_sequence = "\n".join([convert_to_suggestion(action) for action in actions])
+        if outcome > 20:
+            return "A better decision could have been taken: \n" + action_sequence
+        return "Good move!"
+
+    def _get_suggestion(self):
+        action = self.suggestion_strategy.choose_action(self.current_player.state)
+        self._show_suggestion(convert_to_suggestion(action))
+
+    def _show_suggestion(self, suggestion):
+        self.suggestion_label.config(text=suggestion)
