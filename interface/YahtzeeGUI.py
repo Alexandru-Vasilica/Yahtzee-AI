@@ -3,6 +3,10 @@ from time import sleep
 from tkinter import messagebox
 from game.YahtzeeGame import YahtzeeGame
 from player.HumanPlayer import HumanPlayer
+from state.Action import ASSIGN_ACTION_BOUNDARY
+from interface.YahtzeeAssistant import YahtzeeAssistant
+import os
+from dotenv import load_dotenv
 from player.Strategy import AgentStrategy
 from state.Action import ASSIGN_ACTION_BOUNDARY, convert_to_suggestion
 from database.ScoreActions import InsertScore
@@ -15,15 +19,23 @@ class YahtzeeGUI:
         self.suggestion_label = None
         self.human_starting_state = None
         self.root = root
+        self.root.title("Yahtzee")
         self.categories = categories
         self.game = None
         self.current_player = None
         self.dice_selected = [False] * 5
         self.valid_categories = [category.name for category in categories]
         self.reroll_count = 0
+        load_dotenv()
+        self.assistant_response = YahtzeeAssistant(os.getenv("API_KEY"))
+
         self.suggestion_strategy = AgentStrategy('agents/agent_best_2.pth')
         self.player1_name_label = None
         self.player1_name_entry = None
+        self.ai_strategy = None
+        self.strategy_label = None
+        self.qagent_checkbox = None
+        self.minmax_checkbox = None
         self.start_button = None
 
         self.bonus_p2_label = None
@@ -42,6 +54,11 @@ class YahtzeeGUI:
         self.player2_score = None
         self.player1_score = None
         self.score_frame = None
+        self.chat_display = None
+        self.chat_input = None
+        self.chat_bubbles_frame = None
+        self.chat_messages_frame = None
+        self.chat_messages_canvas = None
         self.start_button = None
         self.view_history_button = None
         self.player1_name_entry = None
@@ -73,6 +90,51 @@ class YahtzeeGUI:
             highlightthickness=2
         )
         self.player1_name_entry.pack(side=tk.LEFT, padx=10)
+
+        ai_options_frame = tk.Frame(
+            self.root,
+            bg="#228B22"
+        )
+        ai_options_frame.pack(side=tk.TOP, pady=10)
+
+        self.strategy_label = tk.Label(
+            ai_options_frame,
+            text="Select the AI strategy: ",
+            font=("Arial", 14, "bold"),
+            bg="#228B22",
+            fg="white"
+        )
+        self.strategy_label.pack(side=tk.LEFT, padx=10)
+
+        self.ai_strategy = tk.StringVar(value="QAgent")
+
+        self.qagent_checkbox = tk.Checkbutton(
+            ai_options_frame,
+            text="QAgent",
+            variable=self.ai_strategy,
+            onvalue="QAgent",
+            offvalue="",
+            font=("Arial", 12),
+            bg="#228B22",
+            fg="white",
+            selectcolor="#2E8B57",
+            anchor="w"
+        )
+        self.qagent_checkbox.pack(side=tk.LEFT, anchor="w", padx=5, pady=2)
+
+        self.minmax_checkbox = tk.Checkbutton(
+            ai_options_frame,
+            text="MinMax",
+            variable=self.ai_strategy,
+            onvalue="MinMax",
+            offvalue="",
+            font=("Arial", 12),
+            bg="#228B22",
+            fg="white",
+            selectcolor="#2E8B57",
+            anchor="w"
+        )
+        self.minmax_checkbox.pack(side=tk.LEFT, anchor="w", padx=5, pady=2)
 
         self.start_button = tk.Button(
             self.root,
@@ -108,6 +170,11 @@ class YahtzeeGUI:
             tk.messagebox.showerror("Error", "Please enter a name before starting the game.")
             return
 
+        selected_strategy = self.ai_strategy.get()
+        if not selected_strategy:
+            tk.messagebox.showerror("Error", "Please select an AI strategy before starting the game.")
+            return
+
         loading_label = self.create_loading_label()
         loading_label.pack(side=tk.TOP, pady=20)
         self.root.update()
@@ -116,7 +183,7 @@ class YahtzeeGUI:
             self.view_history_button.pack_forget()
 
         try:
-            self.game = YahtzeeGame(player1_name, self.categories)
+            self.game = YahtzeeGame(player1_name, self.categories, selected_strategy)
         except Exception as e:
             tk.messagebox.showerror("Error", f"An error occurred while starting the game: {e}")
             loading_label.destroy()
@@ -188,16 +255,30 @@ class YahtzeeGUI:
         self.player1_name_label.pack_forget()
         self.player1_name_entry.pack_forget()
         self.start_button.pack_forget()
+        self.strategy_label.pack_forget()
+        self.qagent_checkbox.pack_forget()
+        self.minmax_checkbox.pack_forget()
 
     def setup_ui(self):
         self.root.configure(bg="#228B22")
-
-        main_frame = tk.Frame(self.root, bg="#228B22", padx=10, pady=10)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        main_frame = tk.Frame(self.root, bg="#228B22", padx=5, pady=0)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
 
         center_panel = self.create_center_panel(main_frame)
         right_panel = self.create_right_panel(main_frame)
+        chat_panel = self.create_chat_panel(main_frame)
         bottom_panel = self.create_bottom_panel()
+
+        center_panel.grid(row=0, column=0, sticky="nsew")
+        right_panel.grid(row=0, column=1, sticky="nsew", padx=(5, 0))
+        chat_panel.grid(row=0, column=2, sticky="nsew", padx=(5, 0))
+
+        main_frame.grid_columnconfigure(0, weight=3)
+        main_frame.grid_columnconfigure(1, weight=2)
+        main_frame.grid_columnconfigure(2, weight=1)
+        main_frame.grid_rowconfigure(0, weight=1)
+
+        bottom_panel.pack(side=tk.BOTTOM, fill=tk.X, pady=0)
 
         self.create_suggestion_display(center_panel)
         self.create_dice_display(center_panel)
@@ -209,17 +290,68 @@ class YahtzeeGUI:
         self.start_turn()
 
     def create_center_panel(self, main_frame):
-        center_panel = tk.Frame(main_frame, bg="#228B22", width=300, padx=15)
+        center_panel = tk.Frame(main_frame, bg="#228B22", width=350, padx=15)
         center_panel.grid(row=0, column=0, sticky="ns")
         return center_panel
 
     def create_right_panel(self, main_frame):
-        right_panel = tk.Frame(main_frame, bg="white", relief="solid", bd=2, padx=10, pady=10)
+        right_panel = tk.Frame(main_frame, bg="white", relief="solid", bd=2, padx=10, pady=5)
         right_panel.grid(row=0, column=1, sticky="nsew", padx=15)
         return right_panel
 
+    def create_chat_panel(self, main_frame):
+        chat_panel = tk.Frame(main_frame, bg="white", relief="solid", bd=2)
+        chat_panel.grid(row=0, column=2, sticky="nsew", padx=(10, 0))
+        tk.Label(
+            chat_panel,
+            text="Chat",
+            font=("Arial", 16, "bold"),
+            fg="black",
+            bg="white"
+        ).grid(row=0, column=0, sticky="ew", padx=10, pady=5)
+
+        chat_display_frame = tk.Frame(chat_panel, bg="white")
+        chat_display_frame.grid(row=1, column=0, sticky="nsew", padx=10, pady=5)
+        chat_scrollbar = tk.Scrollbar(chat_display_frame, orient=tk.VERTICAL)
+        chat_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.chat_messages_canvas = tk.Canvas(
+            chat_display_frame,
+            bg="white",
+            yscrollcommand=chat_scrollbar.set,
+            height=150,
+            width=330
+        )
+        self.chat_messages_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        chat_scrollbar.config(command=self.chat_messages_canvas.yview)
+        self.chat_bubbles_frame = tk.Frame(self.chat_messages_canvas, bg="white")
+        self.chat_messages_canvas.create_window((0, 0), window=self.chat_bubbles_frame, anchor="nw")
+        self.chat_messages_canvas.bind(
+            "<Configure>",
+            lambda e: self.chat_messages_canvas.configure(scrollregion=self.chat_messages_canvas.bbox("all"))
+        )
+
+        chat_input_frame = tk.Frame(chat_panel, bg="white", pady=5)
+        chat_input_frame.grid(row=2, column=0, sticky="ew", padx=10)
+        self.chat_input = tk.Entry(chat_input_frame, font=("Arial", 12), width=30)
+        self.chat_input.grid(row=0, column=0, sticky="ew", padx=(0, 5))
+
+        chat_send_button = tk.Button(
+            chat_input_frame,
+            text="Send",
+            command=self.handle_chat_input,
+            bg="#6495ED",
+            fg="black",
+            font=("Arial", 10, "bold"),
+            relief="raised"
+        )
+        chat_send_button.grid(row=0, column=1)
+        chat_panel.grid_rowconfigure(1, weight=1)
+
+        return chat_panel
+
     def create_bottom_panel(self):
-        bottom_panel = tk.Frame(self.root, bg="#228B22", pady=10)
+        bottom_panel = tk.Frame(self.root, bg="#228B22", pady=5)
         bottom_panel.pack(side=tk.BOTTOM, fill=tk.X)
         return bottom_panel
 
@@ -448,6 +580,40 @@ class YahtzeeGUI:
             bd=2,
             width=15
         )
+
+    def handle_chat_input(self):
+        player_message = self.chat_input.get().strip()
+        if not player_message:
+            return
+
+        response = self.assistant_response.generate_chat_response(player_message)
+        self.add_message(player_message, "user")
+        self.add_message(response, "system")
+        self.chat_input.delete(0, tk.END)
+
+    def add_message(self, message, sender):
+        bg_color = "#6495ED" if sender == "user" else "white"
+        message_frame = tk.Frame(self.chat_bubbles_frame, bg="white", pady=5)
+        message_frame.pack(anchor="e" if sender == "user" else "w",
+                           fill="x",
+                           padx=5)
+        tk.Label(
+            message_frame,
+            text=message,
+            wraplength=300,
+            bg=bg_color,
+            font=("Arial", 12),
+            padx=10,
+            pady=5,
+            anchor="w",
+            justify="left"
+        ).pack(anchor="e" if sender == "user" else "w",
+               padx=10,
+               pady=2)
+
+        self.chat_messages_canvas.update_idletasks()
+        self.chat_messages_canvas.configure(scrollregion=self.chat_messages_canvas.bbox("all"))
+        self.chat_messages_canvas.yview_moveto(1)
 
     def enable_category_selection(self):
         for btn in self.category_buttons:

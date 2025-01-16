@@ -119,14 +119,14 @@ class FullHouse(Category):
     def get_score(self, dice: list[int], joker_rule=False) -> int:
         if joker_rule:
             return 25
-        threeDices = False
-        twoDices = False
+        three_dices = False
+        two_dices = False
         for i in range(1, 7):
             if dice.count(i) == 3:
-                threeDices = True
+                three_dices = True
             if dice.count(i) == 2:
-                twoDices = True
-        if threeDices and twoDices:
+                two_dices = True
+        if three_dices and two_dices:
             return 25
         return 0
 
@@ -142,10 +142,10 @@ class SmallStraight(Category):
     def get_score(self, dice: list[int], joker_rule=False) -> int:
         if joker_rule:
             return 30
-        sortedDice = sorted(set(dice))
-        SmallStraights = [{1, 2, 3, 4}, {2, 3, 4, 5}, {3, 4, 5, 6}]
-        for i in SmallStraights:
-            if i.issubset(sortedDice):
+        sorted_dice = sorted(set(dice))
+        small_straights = [{1, 2, 3, 4}, {2, 3, 4, 5}, {3, 4, 5, 6}]
+        for i in small_straights:
+            if i.issubset(sorted_dice):
                 return 30
         return 0
 
@@ -161,10 +161,10 @@ class LargeStraight(Category):
     def get_score(self, dice: list[int], joker_rule=False) -> int:
         if joker_rule:
             return 40
-        sortedDice = sorted(set(dice))
-        LargeStraights = [{1, 2, 3, 4, 5}, {2, 3, 4, 5, 6}]
-        for i in LargeStraights:
-            if i.issubset(sortedDice):
+        sorted_dice = sorted(set(dice))
+        large_straights = [{1, 2, 3, 4, 5}, {2, 3, 4, 5, 6}]
+        for i in large_straights:
+            if i.issubset(sorted_dice):
                 return 40
         return 0
 
