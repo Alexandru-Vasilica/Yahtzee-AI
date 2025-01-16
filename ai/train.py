@@ -37,11 +37,17 @@ def train_agent(agent, env, num_episodes=1000, batch_size=100):
             state = next_state
             total_reward += reward
             agent.train(batch_size)
+        if 2000 < episode < 6000:
+            added_score = 200 * (episode - 2000) * 0.0001
+            total_reward += added_score
+        elif episode >= 6000:
+            added_score = 200 * 4000 * 0.0001
+            total_reward += added_score
         scores.append(total_reward)
         if (episode + 1) % 100 == 0:
             print(f"Episode: {episode + 1}, Total Reward: {total_reward}, Epsilon: {agent.epsilon}")
         if (episode + 1) % 1_000 == 0:
-            agent.save(path.join(save_path, f"agent_2_{episode + 1}.pth"))
+            agent.save(path.join(save_path, f"agent_3_{episode + 1}.pth"))
             show_scores(scores, save_path)
             best_score, avg_score = evaluate_agent(agent, env, num_episodes=100)
             print(f"Best Score: {best_score}, Average Score: {avg_score}")
@@ -78,5 +84,3 @@ def evaluate_agent(agent, env, num_episodes=100, detailed=False):
         print(f"Best final score: {max(final_scores)}")
         print(f"Total final score: {sum(final_scores)}")
     return best_score, total_scores / len(scores)
-
-

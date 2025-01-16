@@ -1,5 +1,6 @@
 import itertools
 import random
+import time
 
 from ai.Agent import QLearningAgent
 from state.Action import Action, get_action_from_index, ASSIGN_ACTION_BOUNDARY, get_action_from_rerolls
@@ -40,7 +41,6 @@ class MinMaxStrategy(Strategy):
 
     def choose_action(self, state: State) -> Action:
         score, action = self.minmax(state, self.depth, float('-inf'), float('inf'), True)
-        print(f'MinMax score: {score}')
         return action
 
     @staticmethod
@@ -94,7 +94,7 @@ class MinMaxStrategy(Strategy):
 
             average = total_eval / count
             beta = min(beta, average)
-            if beta <= alpha:
+            if beta <= alpha and count > 8:
                 break
         expected_value = total_eval / count
         return expected_value, None
@@ -104,9 +104,20 @@ def run_strategy(strategy: Strategy):
     state = get_starting_state(categories=categories)
     while not state.is_final():
         action = strategy.choose_action(state)
-        print(f'Action: {action.index}')
         state = transition(state, action)
     return state.get_score()
 
+
+def test_strategy(strategy: Strategy, runs: int):
+    start = time.time()
+    scores = []
+    for _ in range(runs):
+        score = run_strategy(strategy)
+        scores.append(score)
+    end = time.time()
+    print(f'Average score: {sum(scores) / runs}')
+    print('Max score: ', max(scores))
+    print(f'Total time: {end - start}')
+    print(f'Average time: {(end - start) / runs}')
 
 

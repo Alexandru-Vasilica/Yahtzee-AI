@@ -94,7 +94,6 @@ class QLearningAgent:
                 max_score_gain = possible_score_diff
                 max_category = category
         if score_diff < max_score_gain / 2:
-            print(f"Decision: {action} is not optimal. Max score gain: {max_score_gain} from {max_category}")
             return max_category.index
         return action_index
 
@@ -138,7 +137,7 @@ class QLearningAgent:
 
             target_q_values = rewards + self.gamma * next_q_values * (1 - dones)
 
-        loss = nn.MSELoss()(q_values, target_q_values)
+        loss = nn.MSELoss()(q_values, target_q_values.detach())
 
         self.optimizer.zero_grad()
         loss.backward()

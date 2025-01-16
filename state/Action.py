@@ -1,3 +1,5 @@
+from state.Category import categories
+
 ASSIGN_ACTION_BOUNDARY: int = 12
 ACTION_SIZE: int = 32 + ASSIGN_ACTION_BOUNDARY
 
@@ -41,3 +43,14 @@ def get_action_from_rerolls(rerolls: list[int]) -> RerollAction:
     for i in rerolls:
         index |= 1 << i
     return RerollAction(index + ASSIGN_ACTION_BOUNDARY)
+
+
+def convert_to_suggestion(action: Action) -> str:
+    if action.index <= ASSIGN_ACTION_BOUNDARY:
+        category = next(category for category in categories if category.index == action.index)
+        return f'Assign {category.name}'
+    else:
+        output = 'Reroll dice: '
+        for i in action.rerolls:
+            output += f'{i + 1} '
+        return output
