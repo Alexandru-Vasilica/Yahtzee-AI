@@ -39,6 +39,7 @@ class YahtzeeGUI:
         self.player1_score = None
         self.score_frame = None
         self.start_button = None
+        self.view_history_button = None
         self.player1_name_entry = None
         self.player1_name_label = None
 
@@ -83,6 +84,20 @@ class YahtzeeGUI:
         self.start_button.bind("<Enter>", lambda e: self.start_button.config(bg="#8B0000"))
         self.start_button.bind("<Leave>", lambda e: self.start_button.config(bg="#B22222"))
 
+        self.view_history_button = tk.Button(
+            self.root,
+            text="View History",
+            command=self.view_history,
+            bg="#1E90FF",
+            fg="white",
+            font=("Arial", 16, "bold"),
+            relief="raised",
+            bd=4
+        )
+        self.view_history_button.pack(side=tk.TOP, pady=10)
+        self.view_history_button.bind("<Enter>", lambda e: self.view_history_button.config(bg="#104E8B"))
+        self.view_history_button.bind("<Leave>", lambda e: self.view_history_button.config(bg="#1E90FF"))
+
     def start_game(self):
         player1_name = self.player1_name_entry.get()
         if not player1_name.strip():
@@ -92,6 +107,9 @@ class YahtzeeGUI:
         loading_label = self.create_loading_label()
         loading_label.pack(side=tk.TOP, pady=20)
         self.root.update()
+
+        if self.view_history_button:
+            self.view_history_button.pack_forget()
 
         try:
             self.game = YahtzeeGame(player1_name, self.categories)
@@ -104,6 +122,54 @@ class YahtzeeGUI:
         self.current_player = self.game.player1
         self.hide_name_entry_ui()
         self.setup_ui()
+    
+    def view_history(self):
+        player1_name = self.player1_name_entry.get()
+        if not player1_name.strip():
+            tk.messagebox.showerror("Error", "Please enter a name to view history.")
+            return
+
+        history_window = tk.Toplevel(self.root)
+        history_window.title("Game History")
+        history_window.configure(bg="#228B22")
+
+        history_label = tk.Label(
+            history_window,
+            text=f"History for {player1_name}",
+            font=("Arial", 16, "bold"),
+            bg="#228B22",
+            fg="white"
+        )
+        history_label.pack(pady=10)
+
+        history_content = tk.Text(
+            history_window,
+            font=("Arial", 14),
+            width=50,
+            height=20,
+            bg="#2E8B57",
+            fg="black",
+            state="normal"
+        )
+        scores = GetScore(player1_name)
+        for score in scores:
+            history_content.insert(tk.END, f"• Player: {score[0]} | AI: {score[1]}\n")
+        history_content.pack(pady=10, padx=10)
+
+        back_button = tk.Button(
+            history_window,
+            text="Back",
+            command=history_window.destroy,
+            bg="#B22222",
+            fg="white",
+            font=("Arial", 14, "bold"),
+            relief="raised",
+            bd=4
+        )
+        back_button.pack(pady=10)
+
+        back_button.bind("<Enter>", lambda e: back_button.config(bg="#8B0000"))
+        back_button.bind("<Leave>", lambda e: back_button.config(bg="#B22222"))
 
     def create_loading_label(self):
         return tk.Label(

@@ -8,10 +8,10 @@ def InsertScore(player_score, ai_score, name):
     connection.close()
 
 
-def GetScore():
+def GetScore(name):
     connection = sqlite3.connect('database/database.db')
     cursor = connection.cursor()
-    cursor.execute('SELECT player_score, ai_score FROM history')
+    cursor.execute('SELECT player_score, ai_score FROM history WHERE name = ?', (name,))
     scores = cursor.fetchall()
     connection.close()
     # scores_map = {
