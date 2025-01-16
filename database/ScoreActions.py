@@ -1,9 +1,9 @@
 import sqlite3
 
-def InsertScore(player_score, ai_score):
+def InsertScore(player_score, ai_score, name):
     connection = sqlite3.connect('database/database.db')
     cursor = connection.cursor()
-    cursor.execute('INSERT INTO history (player_score, ai_score) VALUES (?, ?)', (player_score, ai_score))
+    cursor.execute('INSERT INTO history (player_score, ai_score, name) VALUES (?, ?, ?)', (player_score, ai_score, name))
     connection.commit()
     connection.close()
 

@@ -527,7 +527,7 @@ class YahtzeeGUI:
         winner = self.get_winner()
         p1_score = self.game.player1.get_score()
         p2_score = self.game.player2.get_score()
-        InsertScore(p1_score, p2_score)
+        InsertScore(p1_score, p2_score, self.game.player1.name)
         if winner == "It's a tie":
             self.action_label.config(text="Game over! It's a tie!")
             messagebox.showinfo(
