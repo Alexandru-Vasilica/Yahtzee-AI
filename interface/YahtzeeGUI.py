@@ -4,6 +4,8 @@ from tkinter import messagebox
 from game.YahtzeeGame import YahtzeeGame
 from player.HumanPlayer import HumanPlayer
 from state.Action import ASSIGN_ACTION_BOUNDARY
+from database.ScoreActions import InsertScore
+from database.ScoreActions import GetScore
 
 
 class YahtzeeGUI:
@@ -525,6 +527,7 @@ class YahtzeeGUI:
         winner = self.get_winner()
         p1_score = self.game.player1.get_score()
         p2_score = self.game.player2.get_score()
+        InsertScore(p1_score, p2_score)
         if winner == "It's a tie":
             self.action_label.config(text="Game over! It's a tie!")
             messagebox.showinfo(
