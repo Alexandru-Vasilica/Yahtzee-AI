@@ -17,9 +17,20 @@ O comparație a performanțelor celor două strategii poate fi observată în fi
 Un grafic al evoluției reward-ului obținut de  agentul Q-learning:
 
 ![Q-learning](chart.png)
+
+## Principalele tehnologii folosite
+
+- Pytorch
+- Numpy
+- Matplotlib
+- Gemini Ai API (free-tier)
+- Sqlite
+- Tkinter
+
+
 ## Cum se rulează
 
 1. Se clonează repository-ul și se accesează directorul proiectului
 2. Se instalează dependențele folosind comanda `pip install -r requirements.txt`
-3. Se creează un fișier `.env` în care se adaugă cheia de acces la Gemini Ai și se adaugă cheia de API Gemini care poate fi obținută [aici](https://aistudio.google.com/app/apikey)
+3. Se creează un fișier `.env` în care se adaugă cheia de acces la Gemini Ai și se adaugă cheia de API Gemini care poate fi obținută [aici](https://aistudio.google.com/app/apikey). Vezi `.env.example` pentru un exemplu de fișier `.env`
 4. Se rulează aplicația folosind comanda `python main.py`
